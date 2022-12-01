@@ -96,7 +96,7 @@ class JsonTemporalSuite extends munit.FunSuite {
   }
 
   test("Json DeSerialization") {
-    val localDateTime = LocalDate.of(2022, 2, 7).atTime(10, 30, 45)
+    val localDateTime = LocalDate.of(2022, 2, 7).atTime(10, 30, 45, 1)
     val zonedDateTime = ZonedDateTime.of(localDateTime, ZoneId.systemDefault())
 
     val jsObj = Json.obj(

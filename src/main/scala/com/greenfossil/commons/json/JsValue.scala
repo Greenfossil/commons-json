@@ -104,9 +104,9 @@ extension(bd: String)
       case ZONEDDATETIME_REGEX(year, month, day, hh, mm, ss, ohh, omm, zone) => ZonedDateTime.parse(bd)
       case OFFSETDATETIME_REGEX(year, month, day, hh, mm, ss, ohh, omm) => OffsetDateTime.parse(bd).atZoneSimilarLocal(ZoneId.systemDefault())
       case OFFSETTIME_REGEX(hh, mm, ss, ohh, omm) => OffsetTime.parse(bd).atDate(LocalDate.now).atZoneSimilarLocal(ZoneId.systemDefault())
-      case LOCALDATETIME_REGEX(year, month, day, hh, mm, ss) => LocalDateTime.parse(bd).atZone(ZoneId.systemDefault())
+      case LOCALDATETIME_REGEX(year, month, day, hh, mm, ss) => LocalDateTime.parse(bd.replaceAll("[Z\\+].*", "")).atZone(ZoneId.systemDefault())
       case LOCALDATE_REGEX(year, month, day) => LocalDate.parse(bd).atStartOfDay(ZoneId.systemDefault())
-      case LOCALTIME_REGEX(hh, mm, ss) => LocalDate.now.atTime(LocalTime.parse(bd)).atZone(ZoneId.systemDefault())
+      case LOCALTIME_REGEX(hh, mm, ss) => LocalDate.now.atTime(LocalTime.parse(bd.replaceAll("[Z\\+].*", ""))).atZone(ZoneId.systemDefault())
     }
     zdt.toTemporal(tpe)
 

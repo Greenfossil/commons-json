@@ -11,6 +11,6 @@
     </root>
 
     <!--  Application  -->
-    <logger name="json-module" level="DEBUG" />
+    <logger name="json-module" level="INFO" />
 
 </configuration>
