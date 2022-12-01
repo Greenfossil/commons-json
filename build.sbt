@@ -16,7 +16,6 @@ libraryDependencies ++= Seq(
   "org.slf4j" % "slf4j-api" % "2.0.3",
   "ch.qos.logback" % "logback-classic" % "1.4.4" % Test,
   "com.jayway.jsonpath" % "json-path" % "2.7.0" % Test,
-  "com.typesafe.play" %% "play-json" % "2.10.0-RC6" % Test,
   "org.scalameta" %% "munit" % "0.7.29" % Test
 )
 
