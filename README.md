@@ -1,6 +1,6 @@
 # commons-json
 
-![](https://github.com/Greenfossil/commons-json/actions/workflows/run-tests.yml/badge.svg)
+![](https://img.shields.io/github/workflow/status/Greenfossil/commons-json/Run%20tests)
 ![](https://img.shields.io/github/license/Greenfossil/commons-json)
 ![](https://img.shields.io/github/v/tag/Greenfossil/commons-json)
 
@@ -60,6 +60,35 @@ This returns:
 
 Note that any value that is "None" will not be serialized.
 
+You can create a JSON object by parsing a string
+
+```scala
+val jsonStr = """ 
+  {
+    "name" : "Homer",
+    "age" : 50
+  }
+"""
+val json = Json.parse(jsonStr).as[JsObject]
+```
+You can use `toJson` to create a JSON object from a Map or a Seq
+
+```scala
+val userMap = Map(
+  "name" -> "Homer",
+  "age" -> 50
+)
+val jsObject = Json.toJson(userMap)   // JSON Object created from a Map
+val jsArray = Json.toJson(Seq(1,2,3)) // JSON Array created from a Seq
+```
+
+You can also perform arithmatic operations on JSON Objects
+```scala
+Json.obj("name" -> "Homer") ++ Json.obj("age" -> 50)  // Json.obj("name" -> "Homer", "age" -> 50)
+Json.obj("name" -> "Homer") + ("age", 50)             // Json.obj("name" -> "Homer", "age" -> 50)
+Json.obj("name" -> "Homer", "age" -> 50) - "age"      // Json.obj("name" -> "Homer")
+```
+
 ### JSON Traversal
 
 Access your data is simple. From this example below:
@@ -85,6 +114,7 @@ Or we can also use recursive search:
 // return Seq("Homer", "Marge")  
 (jsonObj \\ "name").as[Seq[String]]  
 ```  
+
 
 You can also traverse an Array like this:
 ```scala  
