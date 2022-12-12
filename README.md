@@ -3,133 +3,270 @@
 ![](https://img.shields.io/github/workflow/status/Greenfossil/commons-json/Run%20tests)
 ![](https://img.shields.io/github/license/Greenfossil/commons-json)
 ![](https://img.shields.io/github/v/tag/Greenfossil/commons-json)
+![](https://img.shields.io/maven-central/v/com.greenfossil/commons-json_3)
 
-This is the official Greenfossil Scala library for JSON processing.
 
-## How to Build
-
-This library uses sbt as its build tool. It requires at least Java 17 or later to build.
-
-Follow the official guide on how to install [sbt](https://www.scala-sbt.org/download.html).
+Commons JSON is a lightweight Scala 3 library developed by [Greenfossil](https://www.greenfossil.com/) for JSON processing and 
+is inspired by [Play JSON](https://github.com/playframework/play-json).
 
 ## Getting Started
 
-### Creating a JSON object
+Add `commons-json` as a dependency in your project: 
+* sbt
+    ```sbt
+    libraryDependencies += "com.greenfossil" %% "commons-json" % -version-
+    ```
+* Gradle
+    ```
+    implementation group: 'com.greenfossil', name: 'commons-json_3', version: -version-
+  ```
+* Maven
+    ```maven
+    <dependency>
+         <groupId>com.greenfossil</groupId>
+         <artifactId>commons-json_3</artifactId>
+         <version>-version-</version>
+    </dependency>
+  ```
 
-A JSON object can be created like so:
-```scala  
-val jsonObject = Json.obj(
-  "string" -> "text",
-  "int" -> 1,
-  "long" -> 1L,
-  "float" -> 1.1f,
-  "double" -> 1.1,
-  "boolean" -> true,
-  "obj" -> Json.obj(
-    "key1" -> "value1",
-    "key2" -> Option("value2"),
-    "key3" -> null,
-    "key4" -> None
-  ),
-  "arr" -> Seq("e1", "e2", "e3")
-)  
-```  
+Note that this library requires at least Java 17 or later to build.
 
-To get the JSON string, the *prettyPrint* method can be used:
-```scala  
-Json.prettyPrint(jsonObject)  
-```  
+## JSON Abstract Syntax Tree
+The entire JSON AST revolves in one type `com.greenfossil.commons.json.JsValue`, and has the following subtypes: 
+* `JsNull`: JSON null value
+* `JsString`: JSON string
+* `JsNumber`: JSON number represented as a `scala.math.BigDecimal`
+* `JsBoolean`: JSON boolean
+* `JsArray`: JSON array, consisting of a `Seq[JsValue]`
+* `JsObject`: JSON object, consisting of a `immutable.ListMap[String, JsValue]`
+* `JsTemporal`: JSON value that is converted into Java Time Temporal types, e.g. `java.util.Date`, `java.sql.Date`, 
+   `java.sql.Time`, `java.sql.Timestamp`, `java.time.LocalDateTime`, `java.time.LocalDate`, `java.time.LocalTime`, 
+   `java.time.Instant`, `java.time.OffsetDateTime`, `java.time.OffsetTime`, `java.time.ZonedDateTime`
+* `JsUndefined`: Non-existing JSON value, mainly used as result during path search 
 
-This returns:
-```scala  
+## Read & Write
+
+### Parsing JSON
+```scala
+import com.greenfossil.commons.json.Json
+
+// Parse JSON
+val json = Json.parse(
+  """{
+    |   "firstname": "Homer",
+    |   "lastname": "Simpson", 
+    |   "address": {
+    |       "country": "Singapore", 
+    |       "street": "Orchard Road"
+    |   }, 
+    |   "children": ["Maggie", "Bart", "Lisa"]
+    |}""".stripMargin
+)
+```
+
+#### Stringify JSON value
+```scala
+Json.stringify(json)
+```
+
+or
+
+```scala
+json.toString
+```
+
+Result: 
+```json
+ {"firstname":"Homer","lastname":"Simpson","address":{"country":"Singapore","street":"Orchard Road"},"children":["Maggie","Bart","Lisa"]}
+```
+
+#### Prettify JSON value
+```scala
+Json.prettyPrint(json)
+```
+
+Result: 
+```json
 {
-  "string" : "text",
-  "int" : 1,
-  "long" : 1,
-  "float" : 1.1,
-  "double" : 1.1,
-  "boolean" : true,
-  "obj" : {
-    "key1" : "value1",
-    "key2" : "value2",
-    "key3" : null
+  "firstname" : "Homer",
+  "lastname" : "Simpson",
+  "address" : {
+    "country" : "Singapore",
+    "street" : "Orchard Road"
   },
-  "arr" : [ "e1", "e2", "e3" ]
-}  
-```  
+  "children" : [ "Maggie", "Bart", "Lisa" ]
+}
+```
+
+### Writing JSON
+There are several ways to use write a JSON text using `com.greenfossil.commons.json.Json`. 
+
+#### JSON Object
+```scala
+val json = Json.obj(
+  "firstname" -> "Homer",
+  "lastname" -> "Simpson",
+  "birthday" -> java.time.LocalDate.now.minusYears(50),
+  "gender" -> Some("Male"),
+  "nationality" -> null
+)
+```
+Result:
+```json
+{"firstname":"Homer","lastname":"Simpson","birthday":"1972-12-12","gender":"Male","nationality":null}
+```
 
 Note that any value that is "None" will not be serialized.
 
-You can create a JSON object by parsing a string
-
+#### JSON Array
 ```scala
-val jsonStr = """ 
-  {
-    "name" : "Homer",
-    "age" : 50
-  }
-"""
-val json = Json.parse(jsonStr).as[JsObject]
+Json.arr("Apple", "Banana", "Grapes")
 ```
-You can use `toJson` to create a JSON object from a Map or a Seq
-
-```scala
-val userMap = Map(
-  "name" -> "Homer",
-  "age" -> 50
-)
-val jsObject = Json.toJson(userMap)   // JSON Object created from a Map
-val jsArray = Json.toJson(Seq(1,2,3)) // JSON Array created from a Seq
+Result: 
+```json
+["Apple","Banana","Grapes"]
 ```
 
-You can also perform arithmatic operations on JSON Objects
+#### Convert scala.collection.immutable.Map to JSON Object
 ```scala
-Json.obj("name" -> "Homer") ++ Json.obj("age" -> 50)  // Json.obj("name" -> "Homer", "age" -> 50)
-Json.obj("name" -> "Homer") + ("age", 50)             // Json.obj("name" -> "Homer", "age" -> 50)
-Json.obj("name" -> "Homer", "age" -> 50) - "age"      // Json.obj("name" -> "Homer")
+val relationshipMap = Map("mother" -> "Marge", "father" -> "Homer")
+Json.toJson(relationshipMap)
+```
+Result:
+```json
+{"mother":"Marge","father":"Homer"}
 ```
 
-### JSON Traversal
+### Reading JSON 
 
-Access your data is simple. From this example below:
-```scala  
-val jsonObj = Json.obj(
-  "name" -> "Homer",
-  "age" -> 55,
-  "spouse" -> Json.obj(
-    "name" -> "Marge",
-    "age" -> 50
-  )
-)  
-```  
+Given a JSON value below: 
+```scala
+val json = Json.parse(
+  """{
+    |  "firstname" : "Homer",
+    |  "lastname" : "Simpson",
+    |  "birthday" : "1972-12-12",
+    |  "gender" : "Male",
+    |  "nationality" : null
+    |}""".stripMargin)
+```
+There are multiple ways to read data from JSON object, for example:
 
-We can access "Marge" just like this:
-```scala  
-// return "Marge"  
-(jsonObj \"spouse" \ "name").as[String]  
-```  
+To read a field in a specific type
+```scala
+(json \ "firstname").as[String]
+// val res0: String = Homer
 
-Or we can also use recursive search:
-```scala  
-// return Seq("Homer", "Marge")  
-(jsonObj \\ "name").as[Seq[String]]  
-```  
+(json \ "birthday").as[java.time.LocalDate]
+// val res1: java.time.LocalDate = 1972-12-12
 
+(json \ "birthday").as[java.time.LocalDateTime]
+// val res2: java.time.LocalDateTime = 1972-12-12T00:00
 
-You can also traverse an Array like this:
-```scala  
-val jsObject = Json.obj(
-  "name" -> "Homer",
-  "age" -> 50,
-  "children" -> Seq(
-    Json.obj("name" -> "Lisa"),
-    Json.obj("name" -> "Bart"),
-    Json.obj("name" -> "Maggie")
-  )
-)
-// return "Lisa"
-(jsObject \ "children" \ 0 \ "name").as[String]
-```  
+(json \ "nationality").as[String]
+// val res3: String = null
+```
+
+Note that using the `.as[T]` method will return a `com.greenfossil.commons.json.JsonException` if the field doesn't exist.
+
+To read a field in a specific type but may not exist
+```scala
+(json \ "nationality").asOpt[String]
+// val res4: Option[String] = Some(null)
+
+(json \ "race").asOpt[String]
+// val res5: Option[String] = None
+```
+
+To read a field in a specific type but exclude `null` values
+```scala
+(json \ "nationality").asNonNullOpt[String]
+// val res6: Option[String] = None
+```
+
+## JSON Traversal
+
+Commons JSON allows you to query a field in a JSON object using an absolute or relative JSON path. 
+
+Given the JSON object below
+```scala
+val json = Json.parse(
+  """{
+    |  "name" : "Homer",
+    |  "age" : 55,
+    |  "spouse" : {
+    |    "name" : "Marge",
+    |    "age" : 50
+    |  },
+    |  "children" : ["Bart", "Maggie", "Lisa"]
+    |}""".stripMargin)
+```
+
+To query using an absolute path
+```scala
+(json \ "spouse" \ "name").as[String]
+// val res0: String = Marge
+
+(json \ "children" \ 0).as[String]
+// val res1: String = Bart
+```
+
+To query using a relative path
+```scala
+(json \\ "name").as[Seq[String]]
+// val res2: Seq[String] = List(Homer, Marge)
+```
+
+## Java Time Support
+
+Given the below JSON object
+```scala
+val json = Json.parse(
+  """{
+    |  "date" : "2022-12-12",
+    |  "time" : "17:32:49",
+    |  "dateTime" : "2022-12-12T17:32:49",
+    |  "instant" : "2022-12-12T09:32:49",
+    |  "offsetDateTime" : "2022-12-12T17:32:49+08:00",
+    |  "offsetTime" : "17:32:49+08:00",
+    |  "zonedDateTime" : "2022-12-12T17:32:49+08:00[Asia/Singapore]"
+    |}""".stripMargin)
+```
+
+To read the fields and convert into Temporal types
+```scala
+(json \ "date").as[java.sql.Date]
+// val res0: java.sql.Date = 2022-12-12
+(json \ "date").as[java.time.LocalDate]
+// val res1: java.time.LocalDate = 2022-12-12
+
+(json \ "time").as[java.sql.Time]
+// val res2: java.sql.Time = 17:32:49
+(json \ "time").as[java.time.LocalTime]
+// val res3: java.time.LocalTime = 17:32:49
+
+(json \ "dateTime").as[java.util.Date]
+// val res4: java.util.Date = Mon Dec 12 17:32:49 SGT 2022
+(json \ "dateTime").as[java.sql.Timestamp]
+// val res5: java.sql.Timestamp = 2022-12-12 17:32:49.0
+(json \ "dateTime").as[java.time.LocalDateTime]
+// val res6: java.time.LocalDateTime = 2022-12-12T17:32:49
+
+(json \ "instant").as[java.time.Instant]
+// val res7: java.time.Instant = 2022-12-12T01:32:49Z
+
+(json \ "offsetDateTime").as[java.time.OffsetDateTime]
+// val res8: java.time.OffsetDateTime = 2022-12-12T17:32:49+08:00
+
+(json \ "offsetTime").as[java.time.OffsetTime] 
+// val res9: java.time.OffsetTime = 17:32:49+08:00
+
+(json \ "zonedDateTime").as[java.time.ZonedDateTime] 
+// val res10: java.time.ZonedDateTime = 2022-12-12T17:32:49+08:00[Asia/Singapore]
+(json \ "zonedDateTime").as[java.time.Instant] 
+// val res11: java.time.Instant = 2022-12-12T09:32:49Z
+```
+
 
 ## License
 
