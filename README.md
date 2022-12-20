@@ -1,6 +1,6 @@
 # commons-json
 
-![](https://img.shields.io/github/workflow/status/Greenfossil/commons-json/Run%20tests)
+![](https://img.shields.io/github/actions/workflow/status/Greenfossil/commons-json/run-tests.yml?branch=master)
 ![](https://img.shields.io/github/license/Greenfossil/commons-json)
 ![](https://img.shields.io/github/v/tag/Greenfossil/commons-json)
 ![](https://img.shields.io/maven-central/v/com.greenfossil/commons-json_3)
