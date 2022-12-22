@@ -1,9 +1,10 @@
 # commons-json
 
-![](https://img.shields.io/github/actions/workflow/status/Greenfossil/commons-json/run-tests.yml?branch=master)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/Greenfossil/commons-json/run-tests.yml?branch=master)
 ![](https://img.shields.io/github/license/Greenfossil/commons-json)
 ![](https://img.shields.io/github/v/tag/Greenfossil/commons-json)
-![](https://img.shields.io/maven-central/v/com.greenfossil/commons-json_3)
+![Maven Central](https://img.shields.io/maven-central/v/com.greenfossil/commons-json_3)
+[![javadoc](https://javadoc.io/badge2/com.greenfossil/commons-json_3/javadoc.svg)](https://javadoc.io/doc/com.greenfossil/commons-json_3)
 
 
 Commons JSON is a lightweight Scala 3 library developed by [Greenfossil](https://www.greenfossil.com/) for JSON processing and 
