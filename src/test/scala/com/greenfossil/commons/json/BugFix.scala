@@ -16,6 +16,8 @@
 
 package com.greenfossil.commons.json
 
+import scala.language.implicitConversions
+
 class BugFix extends munit.FunSuite {
 
   test("Parse null"){

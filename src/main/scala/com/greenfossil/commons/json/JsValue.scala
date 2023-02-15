@@ -152,7 +152,7 @@ object JsValue:
     def apply(xs: Seq[?]): JsArray = JsArray(xs.map(toJsonType))
 
   given Conversion[Set[?], JsArray] with
-    def apply(xs: Set[?]): JsArray = JsArray(xs.map(toJsonType))
+    def apply(xs: Set[?]): JsArray = JsArray(xs.toSeq.map(toJsonType))
 
   given Conversion[Option[?], Option[JsValue]] with
     def apply(xs: Option[?]): Option[JsValue] = xs.map(toJsonType)
