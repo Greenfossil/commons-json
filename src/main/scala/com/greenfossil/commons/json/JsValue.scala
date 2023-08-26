@@ -448,6 +448,8 @@ sealed trait JsValue:
   def toJson: String = Json.stringify(this)
 
   def stringify: String = Json.stringify(this)
+  
+  def prettyPrint: String = Json.prettyPrint(this)
 
   def encodeBase64URL: String = encodeBase64URL("UTF-8")
 

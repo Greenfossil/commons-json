@@ -71,4 +71,7 @@ object Json:
   def prettyPrint(jsValue: JsValue): String =
     JsonModule.prettyPrint(jsValue)
 
+  def prettyPrint(string: String): String =
+    prettyPrint(Json.parse(string))
+
 

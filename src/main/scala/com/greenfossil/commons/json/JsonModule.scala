@@ -41,7 +41,7 @@ private[json] object JsonModule:
   lazy val mapper = JsonMapper.builder()
     .enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
     .enable(JsonGenerator.Feature.WRITE_BIGDECIMAL_AS_PLAIN)
-    .nodeFactory(JsonNodeFactory.withExactBigDecimals(true))
+    .nodeFactory(JsonNodeFactory(true))
     .addModules(new JsonModule)
     .build()
 
