@@ -70,4 +70,24 @@ class JsObjectSuite extends munit.FunSuite {
 
   }
 
+  test("removeNullValues"){
+    val jsObj1 = Json.obj(
+      "f1" -> "foo",
+      "f2" -> "bar"
+    )
+    val jsObj2 = jsObj1.removeNullValues()
+    assertEquals(jsObj2, jsObj1)
+
+    val jsObj3 = Json.obj(
+      "f1" -> "foo",
+      "f2" -> null
+    )
+    val jsObj4 = jsObj3.removeNullValues()
+    assertEquals(jsObj3.fields.size, 2)
+    assertEquals(jsObj4.fields.size, 1)
+    assert(jsObj3 != jsObj4)
+    assertEquals(jsObj4, Json.obj("f1" -> "foo"))
+
+  }
+
 }

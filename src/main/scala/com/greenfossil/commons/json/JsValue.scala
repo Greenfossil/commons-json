@@ -556,6 +556,15 @@ case class JsObject(value: immutable.ListMap[String, JsValue]) extends JsValue:
 
   def fields: Seq[(String, JsValue)] = value.toList
 
+  /**
+   * 
+   * @return - a new JsObject where all fields will not be null. If there is not null values, it would return itself
+   */
+  def removeNullValues(): JsObject = 
+    val nonNullFields = fields.filter(_._2 != JsNull)
+    if nonNullFields == fields then this
+    else JsObject(nonNullFields)
+
   def apply(field: String): JsValue = value.getOrElse(field, JsUndefined(s"Field ${field} does not exists"))
 
   def ++ (otherObj: JsObject): JsObject =
