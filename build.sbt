@@ -2,7 +2,7 @@ name := "commons-json"
 
 organization := "com.greenfossil"
 
-version := "1.0.7"
+version := "1.0.8"
 
 scalaVersion := "3.3.1"
 
@@ -12,7 +12,7 @@ Compile / javacOptions ++= Seq("-source", "17")
 
 libraryDependencies ++= Seq(
   //https://github.com/FasterXML/jackson-core
-  "com.fasterxml.jackson.core" % "jackson-databind" % "2.15.3",
+  "com.fasterxml.jackson.core" % "jackson-databind" % "2.16.1",
   "org.slf4j" % "slf4j-api" % "2.0.10",
   "ch.qos.logback" % "logback-classic" % "1.4.14" % Test,
   "org.scalameta" %% "munit" % "0.7.29" % Test
