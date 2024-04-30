@@ -45,21 +45,29 @@ object Json:
    */
   def obj(fields: Tuple2[String,  JsValue | Option[JsValue]]* ): JsObject =
     // Filter out key-value pairs where value is None
-    val nonNullFields: Seq[(String, JsValue)] = fields.collect{
-      case (key, null) => key -> JsNull
-      case (key, jsValue: JsValue) => key -> jsValue
-      case (key, Some(jsValue)) => key -> jsValue
+    val nonNullFields: Seq[(String, JsValue)] = fields.foldLeft(Seq[(String, JsValue)]()){(result, e) =>
+      e match 
+        case (key, null) => (key, JsNull) +: result
+        case (key, jsValue: JsValue) => (key, jsValue) +: result
+        case (key, Some(jsArray: JsArray)) =>
+          if jsArray.value.isEmpty then result else  (key, jsArray) +: result
+        case (key, Some(jsValue)) => (key, jsValue) +: result
+        case (key, None) => result
     }
-    JsObject(nonNullFields)
+    JsObject(nonNullFields.reverse)
 
   def arr(items: JsValue | Option[JsValue]*): JsArray =
     // Filter out value that is None
-    val nonNullItems: Seq[JsValue] = items.collect{
-      case null => JsNull
-      case jsValue: JsValue => jsValue
-      case Some(jsValue) => jsValue
+    val nonNullItems: Seq[JsValue] = items.foldLeft(Seq[JsValue]()) { (result, e) =>
+      e match
+        case null => JsNull +: result
+        case jsValue: JsValue => jsValue +: result
+        case Some(jsArray: JsArray) =>
+          if jsArray.value.isEmpty then result else jsArray +: result
+        case Some(jsValue) => jsValue +: result
+        case None => result
     }
-    JsArray(nonNullItems)
+    JsArray(nonNullItems.reverse)
 
   def objIfTrue(isTrue: => Boolean)(fields: Tuple2[String,  JsValue | Option[JsValue]]*): Option[JsObject] =
     if isTrue then Option(this.obj(fields*))
