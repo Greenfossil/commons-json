@@ -85,9 +85,12 @@ extension(jDate: java.util.Date)
   def toTemporal(tpe: String):Temporal = jDate.toInstant.atZone(ZoneId.systemDefault()).toTemporal(tpe)
 
 extension(bd: BigDecimal)
-  def toTemporal(tpe: String):Temporal = Instant.ofEpochMilli(bd.longValue).atZone(ZoneId.systemDefault()).toTemporal(tpe)
+  def toTemporal(tpe: String):Temporal =
+    //If precision is 10 or less, assume it is in seconds
+    val instant = if bd.precision < 11 then Instant.ofEpochSecond(bd.longValue) else Instant.ofEpochMilli(bd.longValue)
+    instant.atZone(ZoneId.systemDefault()).toTemporal(tpe)
 
-val EPOCTIME_REGEX = """\d+""".r
+val EPOCTIME_REGEX = """(\d+)""".r
 val LOCALDATE_REGEX = """(\d\d\d\d)-(\d\d)-(\d\d)""".r
 val LOCALTIME_REGEX = """(\d\d):(\d\d):(\d\d).*""".r
 val LOCALDATETIME_REGEX = """(\d\d\d\d)-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d).*""".r
@@ -96,17 +99,20 @@ val OFFSETDATETIME_REGEX = """(\d\d\d\d)-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)\+(\d
 val OFFSETTIME_REGEX = """(\d\d):(\d\d):(\d\d)\+(\d\d):(\d\d)""".r
 val ZONEDDATETIME_REGEX = """(\d\d\d\d)-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)\+(\d\d):(\d\d)\[(.+)\]""".r
 
-extension(bd: String)
+extension(s: String)
   def toTemporal(tpe: String):Temporal  =
-    val zdt = bd match {
-      case EPOCTIME_REGEX(long) => Instant.ofEpochMilli(long.toLong).atZone(ZoneId.systemDefault())
-      case INSTANT_REGEX(year, month, day, hh, mm, ss) => Instant.parse(bd).atZone(ZoneId.systemDefault())
-      case ZONEDDATETIME_REGEX(year, month, day, hh, mm, ss, ohh, omm, zone) => ZonedDateTime.parse(bd)
-      case OFFSETDATETIME_REGEX(year, month, day, hh, mm, ss, ohh, omm) => OffsetDateTime.parse(bd).atZoneSimilarLocal(ZoneId.systemDefault())
-      case OFFSETTIME_REGEX(hh, mm, ss, ohh, omm) => OffsetTime.parse(bd).atDate(LocalDate.now).atZoneSimilarLocal(ZoneId.systemDefault())
-      case LOCALDATETIME_REGEX(year, month, day, hh, mm, ss) => LocalDateTime.parse(bd.replaceAll("[Z\\+].*", "")).atZone(ZoneId.systemDefault())
-      case LOCALDATE_REGEX(year, month, day) => LocalDate.parse(bd).atStartOfDay(ZoneId.systemDefault())
-      case LOCALTIME_REGEX(hh, mm, ss) => LocalDate.now.atTime(LocalTime.parse(bd.replaceAll("[Z\\+].*", ""))).atZone(ZoneId.systemDefault())
+    val zdt = s match {
+      case EPOCTIME_REGEX(long) =>
+        //If precision is 10 or less, assume it is in seconds
+        val instant = if long.length < 11 then Instant.ofEpochSecond(long.toLong) else Instant.ofEpochMilli(long.toLong)
+        instant.atZone(ZoneId.systemDefault())
+      case INSTANT_REGEX(year, month, day, hh, mm, ss) => Instant.parse(s).atZone(ZoneId.systemDefault())
+      case ZONEDDATETIME_REGEX(year, month, day, hh, mm, ss, ohh, omm, zone) => ZonedDateTime.parse(s)
+      case OFFSETDATETIME_REGEX(year, month, day, hh, mm, ss, ohh, omm) => OffsetDateTime.parse(s).atZoneSimilarLocal(ZoneId.systemDefault())
+      case OFFSETTIME_REGEX(hh, mm, ss, ohh, omm) => OffsetTime.parse(s).atDate(LocalDate.now).atZoneSimilarLocal(ZoneId.systemDefault())
+      case LOCALDATETIME_REGEX(year, month, day, hh, mm, ss) => LocalDateTime.parse(s.replaceAll("[Z\\+].*", "")).atZone(ZoneId.systemDefault())
+      case LOCALDATE_REGEX(year, month, day) => LocalDate.parse(s).atStartOfDay(ZoneId.systemDefault())
+      case LOCALTIME_REGEX(hh, mm, ss) => LocalDate.now.atTime(LocalTime.parse(s.replaceAll("[Z\\+].*", ""))).atZone(ZoneId.systemDefault())
     }
     zdt.toTemporal(tpe)
 
@@ -594,6 +600,14 @@ case class JsObject(value: immutable.ListMap[String, JsValue]) extends JsValue:
       JsObject(result)
     }
     merge(this, other)
+    
+  def deepMergeIfTrue(isTrue: Boolean)(other: JsObject): JsObject =
+    if isTrue then this.deepMerge(other)
+    else this
+  
+  def deepMergeIfFalse(isTrue: Boolean)(other: JsObject): JsObject =
+    if isTrue then this
+    else this.deepMerge(other)
 
   def keys: Set[String] = value.keys.toSet
 

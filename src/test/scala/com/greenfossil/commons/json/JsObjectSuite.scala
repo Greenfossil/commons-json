@@ -64,10 +64,87 @@ class JsObjectSuite extends munit.FunSuite {
 
     val resultObj = leftObj.deepMerge(rightObj)
 
-    assertEquals(expectedResult, resultObj)
+    assertEquals(resultObj, expectedResult)
 
-    println(s"resultObj = ${Json.prettyPrint(resultObj)}")
+  }
 
+  test("deepMergeifTrue") {
+    val leftObj = Json.parse(
+      """
+        |{
+        |  "a": "this is a",
+        |  "b": "this is b",
+        |  "c": {
+        |    "x": 1,
+        |    "y": 2
+        |  }
+        |}""".stripMargin).as[JsObject]
+    val rightObj = Json.parse(
+      """
+        |{
+        |  "a": "this is a new a",
+        |  "c": {
+        |    "x": 3
+        |  }
+        |}""".stripMargin).as[JsObject]
+
+
+    val expectedResult = Json.parse(
+      """
+        |{
+        |  "a": "this is a new a",
+        |  "b": "this is b",
+        |  "c": {
+        |    "x": 3,
+        |    "y": 2
+        |  }
+        |}""".stripMargin).as[JsObject]
+
+
+    val resultObjIfTrue = leftObj.deepMergeIfTrue(true)(rightObj)
+    val resultObjIfFalse = leftObj.deepMergeIfTrue(false)(rightObj)
+
+    assertEquals(resultObjIfTrue, expectedResult)
+    assertEquals(resultObjIfFalse, leftObj)
+  }
+
+  test("deepMergeifFalse") {
+    val leftObj = Json.parse(
+      """
+        |{
+        |  "a": "this is a",
+        |  "b": "this is b",
+        |  "c": {
+        |    "x": 1,
+        |    "y": 2
+        |  }
+        |}""".stripMargin).as[JsObject]
+    val rightObj = Json.parse(
+      """
+        |{
+        |  "a": "this is a new a",
+        |  "c": {
+        |    "x": 3
+        |  }
+        |}""".stripMargin).as[JsObject]
+
+
+    val expectedResult = Json.parse(
+      """
+        |{
+        |  "a": "this is a new a",
+        |  "b": "this is b",
+        |  "c": {
+        |    "x": 3,
+        |    "y": 2
+        |  }
+        |}""".stripMargin).as[JsObject]
+
+    val resultObjIfTrue = leftObj.deepMergeIfFalse(true)(rightObj)
+    val resultObjIfFalse = leftObj.deepMergeIfFalse(false)(rightObj)
+
+    assertEquals(resultObjIfTrue, leftObj)
+    assertEquals(resultObjIfFalse, expectedResult)
   }
 
   test("removeNullValues"){

@@ -140,5 +140,17 @@ class JsonTemporalSuite extends munit.FunSuite {
     assertEquals(parsedJson("zonedDT").as[ZonedDateTime], zonedDateTime)
     assertEquals(parsedJson("zonedDT").asOpt[ZonedDateTime], Some(zonedDateTime))
   }
+  
+  test("seconds deserialization"){
+    val parsedJson = Json.parse("""{"time":1714389540}""")
+    assertNoDiff((parsedJson \ "time").as[LocalDateTime].toString, "2024-04-29T19:19")
+    
+  }
+
+  test("String temporal extensions"){
+    val instantInSecs = "1714389540".toTemporal("Instant")
+    val instantInMillis = "1714389540000".toTemporal("Instant")
+    assertEquals(instantInSecs, instantInMillis)
+  }
 
 }

@@ -52,7 +52,38 @@ object Json:
     }
     JsObject(nonNullFields)
 
-  def arr(items: JsValue*): JsArray =  JsArray(items)
+  def arr(items: JsValue | Option[JsValue]*): JsArray =
+    // Filter out value that is None
+    val nonNullItems: Seq[JsValue] = items.collect{
+      case null => JsNull
+      case jsValue: JsValue => jsValue
+      case Some(jsValue) => jsValue
+    }
+    JsArray(nonNullItems)
+
+  def objIfTrue(isTrue: => Boolean)(fields: Tuple2[String,  JsValue | Option[JsValue]]*): Option[JsObject] =
+    if isTrue then Option(this.obj(fields*))
+    else Option(null)
+    
+  def objIfFalse(isTrue: => Boolean)(fields: Tuple2[String,  JsValue | Option[JsValue]]*): Option[JsObject] =
+    if isTrue then Option(null)
+    else Option(this.obj(fields*))
+    
+  def arrIfTrue(isTrue: => Boolean)(items: JsValue | Option[JsValue]*): Option[JsArray] =
+    if isTrue then Option(this.arr(items*))
+    else Option(null)
+
+  def arrIfFalse(isTrue: => Boolean)(items: JsValue | Option[JsValue]*): Option[JsArray] =
+    if isTrue then Option(null)
+    else Option(this.arr(items*))
+
+  def ifTrue(isTrue: => Boolean)(jsValue: JsValue): Option[JsValue] =
+    if isTrue then Option(jsValue)
+    else Option(null)
+
+  def ifFalse(isTrue: => Boolean)(jsValue: JsValue): Option[JsValue] =
+    if isTrue then Option(null)
+    else Option(jsValue)
 
   def toJson(obj: Map[String, Any]): JsObject =
     JsObject(obj.toList.map(entry => entry._1 -> toJsonType(entry._2)))

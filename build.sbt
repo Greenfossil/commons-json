@@ -2,7 +2,7 @@ name := "commons-json"
 
 organization := "com.greenfossil"
 
-version := "1.0.9"
+version := "1.0.10-SNAPSHOT"
 
 scalaVersion := "3.3.1"
 
@@ -19,3 +19,8 @@ libraryDependencies ++= Seq(
 )
 
 lazy val commonsJson = project.in(file("."))
+
+//Remove logback from test jar
+Test / packageBin / mappings ~= {
+  _.filterNot(_._1.getName.startsWith("logback"))
+}
