@@ -31,17 +31,26 @@ type Number = Int | Long | Float | Double | BigDecimal
 type Temporal = java.util.Date | java.sql.Date | java.sql.Time | java.sql.Timestamp |
   LocalDateTime | LocalDate | LocalTime | Instant | OffsetDateTime | OffsetTime | ZonedDateTime
 
-private def toJsonType(x: Any): JsValue =
-  x.asInstanceOf[Matchable] match
+private def primitiveToJsValue(x: String | Boolean | Number | Temporal | Null | JsValue) : JsValue =
+  x match
     case null => JsNull
     case s: String => JsString(s)
     case b: Boolean => JsBoolean(b)
     case n: Number => JsNumber(n)
     case t: Temporal => JsTemporal(t)
+    case js: JsValue => js
+
+private def toJsonType(x: Any): JsValue =
+  x.asInstanceOf[Matchable] match
+    case null => primitiveToJsValue(null)
+    case x : (String | Boolean |  Number | Temporal | JsValue) => primitiveToJsValue(x)
     case xs: Array[?] => JsArray(xs.toIndexedSeq.map(toJsonType))
     case obj: Map[?, ?] => JsObject(obj.toList.map(tup2 => tup2._1.toString -> toJsonType(tup2._2)))
     case it: Iterable[?] => JsArray(it.map(toJsonType).toList)
-    case js: JsValue => js
+
+private def longToInstant(len: Int, value: Long): Instant =
+  //If precision is 10 or less, assume it is in seconds
+  if len < 11 then Instant.ofEpochSecond(value) else Instant.ofEpochMilli(value)
 
 extension [T <: Temporal](t: T)
   def jsonFormat(format: String): JsTemporal = JsTemporal(t, format)
@@ -85,10 +94,7 @@ extension(jDate: java.util.Date)
   def toTemporal(tpe: String):Temporal = jDate.toInstant.atZone(ZoneId.systemDefault()).toTemporal(tpe)
 
 extension(bd: BigDecimal)
-  def toTemporal(tpe: String):Temporal =
-    //If precision is 10 or less, assume it is in seconds
-    val instant = if bd.precision < 11 then Instant.ofEpochSecond(bd.longValue) else Instant.ofEpochMilli(bd.longValue)
-    instant.atZone(ZoneId.systemDefault()).toTemporal(tpe)
+  def toTemporal(tpe: String):Temporal = longToInstant(bd.precision, bd.longValue).atZone(ZoneId.systemDefault()).toTemporal(tpe)
 
 val EPOCTIME_REGEX = """(\d+)""".r
 val LOCALDATE_REGEX = """(\d\d\d\d)-(\d\d)-(\d\d)""".r
@@ -102,10 +108,7 @@ val ZONEDDATETIME_REGEX = """(\d\d\d\d)-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)\+(\d\
 extension(s: String)
   def toTemporal(tpe: String):Temporal  =
     val zdt = s match {
-      case EPOCTIME_REGEX(long) =>
-        //If precision is 10 or less, assume it is in seconds
-        val instant = if long.length < 11 then Instant.ofEpochSecond(long.toLong) else Instant.ofEpochMilli(long.toLong)
-        instant.atZone(ZoneId.systemDefault())
+      case EPOCTIME_REGEX(long) => longToInstant(long.length, long.toLong).atZone(ZoneId.systemDefault())
       case INSTANT_REGEX(year, month, day, hh, mm, ss) => Instant.parse(s).atZone(ZoneId.systemDefault())
       case ZONEDDATETIME_REGEX(year, month, day, hh, mm, ss, ohh, omm, zone) => ZonedDateTime.parse(s)
       case OFFSETDATETIME_REGEX(year, month, day, hh, mm, ss, ohh, omm) => OffsetDateTime.parse(s).atZoneSimilarLocal(ZoneId.systemDefault())
@@ -304,7 +307,7 @@ sealed trait JsValue:
   private def jsValueToJsTemporal(jsValue: JsValue, tpe: String) =
     jsValue match
       case JsString(s) => JsTemporal(s.toTemporal("Instant"))
-      case JsNumber(bd) => JsTemporal(Instant.ofEpochMilli(bd.longValue))
+      case JsNumber(bd) => JsTemporal(longToInstant(bd.precision, bd.longValue))
       case value : JsTemporal => value
       case JsNull => JsNull
       case JsUndefined(value) => throw new JsonException(s"Undefined value [${value}]")
@@ -553,7 +556,10 @@ import scala.collection.immutable
 
 object JsObject:
   val empty: JsObject = JsObject(immutable.ListMap.empty)
-  def apply(fields: Seq[(String, JsValue)]): JsObject = new JsObject(immutable.ListMap(fields*))
+
+  def apply(fields: Seq[(String, JsValue | String | Boolean | Number | Temporal | Null)]): JsObject =
+    val jsFields = fields.map((name, v) => name -> primitiveToJsValue(v))
+    new JsObject(immutable.ListMap(jsFields *))
 
 
 case class JsObject(value: immutable.ListMap[String, JsValue]) extends JsValue:
@@ -601,11 +607,11 @@ case class JsObject(value: immutable.ListMap[String, JsValue]) extends JsValue:
     }
     merge(this, other)
     
-  def deepMergeIfTrue(isTrue: Boolean)(other: JsObject): JsObject =
+  def deepMergeIfTrue(isTrue: => Boolean)(other: => JsObject): JsObject =
     if isTrue then this.deepMerge(other)
     else this
   
-  def deepMergeIfFalse(isTrue: Boolean)(other: JsObject): JsObject =
+  def deepMergeIfFalse(isTrue: => Boolean)(other: => JsObject): JsObject =
     if isTrue then this
     else this.deepMerge(other)
 

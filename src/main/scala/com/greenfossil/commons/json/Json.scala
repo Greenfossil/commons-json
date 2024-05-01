@@ -43,12 +43,12 @@ object Json:
    * @param fields - 'None' name value pair will be dropped. Allow null as Json ,
    * @return
    */
-  def obj(fields: Tuple2[String,  JsValue | Option[JsValue]]* ): JsObject =
+  def obj(fields: Tuple2[String,  JsValue | String | Boolean | Number | Temporal | Null | Option[JsValue]]* ): JsObject =
     // Filter out key-value pairs where value is None
     val nonNullFields: Seq[(String, JsValue)] = fields.foldLeft(Seq[(String, JsValue)]()){(result, e) =>
       e match 
         case (key, null) => (key, JsNull) +: result
-        case (key, jsValue: JsValue) => (key, jsValue) +: result
+        case (key, x : (String | Boolean | Number | Temporal | JsValue)) => (key, primitiveToJsValue(x)) +: result
         case (key, Some(jsArray: JsArray)) =>
           if jsArray.value.isEmpty then result else  (key, jsArray) +: result
         case (key, Some(jsValue)) => (key, jsValue) +: result
@@ -85,11 +85,11 @@ object Json:
     if isTrue then Option(null)
     else Option(this.arr(items*))
 
-  def ifTrue(isTrue: => Boolean)(jsValue: JsValue): Option[JsValue] =
+  def ifTrue(isTrue: => Boolean)(jsValue: => JsValue): Option[JsValue] =
     if isTrue then Option(jsValue)
     else Option(null)
 
-  def ifFalse(isTrue: => Boolean)(jsValue: JsValue): Option[JsValue] =
+  def ifFalse(isTrue: => Boolean)(jsValue: => JsValue): Option[JsValue] =
     if isTrue then Option(null)
     else Option(jsValue)
 
