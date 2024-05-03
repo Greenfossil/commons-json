@@ -42,7 +42,7 @@ private def primitiveToJsValue(x: String | Boolean | Number | Temporal | Null | 
 
 private def toJsonType(x: Any): JsValue =
   x.asInstanceOf[Matchable] match
-    case null => primitiveToJsValue(null)
+    case null => null
     case x : (String | Boolean |  Number | Temporal | JsValue) => primitiveToJsValue(x)
     case xs: Array[?] => JsArray(xs.toIndexedSeq.map(toJsonType))
     case obj: Map[?, ?] => JsObject(obj.toList.map(tup2 => tup2._1.toString -> toJsonType(tup2._2)))

@@ -68,4 +68,22 @@ class OptionalJsObjectJsArraySuite extends munit.FunSuite {
     assertNoDiff(jsArr.stringify, """[1,[""]]""")
   }
 
+  test("Option null value"){
+    val s: String = null
+
+    val jsObj = Json.obj(
+      "a" -> Option(null),
+      "b" -> Option(s)
+    )
+    assertNoDiff(jsObj.toString(), "{}")
+  }
+
+  test("Create JsObject with just tuples"){
+    val fields = Seq("a" -> 1, "b" -> "2")
+    val jsObj1:JsObject = JsObject(fields)
+    val jsObj2 = Json.obj(fields*)
+    assertNoDiff(jsObj1.stringify, """{"a":1,"b":"2"}""")
+    assertNoDiff(jsObj1.stringify, jsObj2.stringify)
+  }
+
 }
