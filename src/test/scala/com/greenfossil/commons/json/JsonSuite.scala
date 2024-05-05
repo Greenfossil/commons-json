@@ -57,8 +57,7 @@ class JsonSuite extends munit.FunSuite {
     val jsArray = JsArray(jsObjects)
     val string = """[{"value":[1]},{"value":[1,2]},{"value":[1,2,3]},{"value":[1,2,3,4]},{"value":[1,2,3,4,5]}]"""
 
-    println(s"jsArray.toString = ${jsArray.toString}")
-    assertNoDiff(jsArray.toString, string)
+    assertNoDiff(jsArray.stringify, string)
     assertEquals(Json.parse(string), jsArray)
 
   }
@@ -92,8 +91,7 @@ class JsonSuite extends munit.FunSuite {
     val string = "234.5"
     val jsNumber = JsNumber(num)
 
-    println(s"jsNumber.toString = ${jsNumber.toString}")
-    assertNoDiff(jsNumber.toString, string)
+    assertNoDiff(jsNumber.stringify, string)
     assertEquals(Json.parse(string), jsNumber)
   }
 

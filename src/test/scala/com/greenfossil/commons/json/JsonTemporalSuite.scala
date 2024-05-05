@@ -22,34 +22,60 @@ class JsonTemporalSuite extends munit.FunSuite {
   import java.time.*
 
   test("JsTemporal creation") {
-    val jDate = JsTemporal(java.util.Date())
-    println(s"jDate = ${jDate}")
+    {
+      val jDate = java.util.Date()
+      val jsTemp = JsTemporal(jDate)
+      assertNoDiff(jsTemp.stringify, jDate.toInstant.toEpochMilli.toString)
+    }
 
-    val localDate = JsTemporal(LocalDate.now)
-    println(s"localDate = ${localDate}")
+    {
+      val localDate = LocalDate.now
+      val jsTemp = JsTemporal(localDate)
+      assertNoDiff(jsTemp.stringify, s"\"${localDate.toString}\"")
+    }
 
-    val localTime = JsTemporal(LocalTime.now)
-    println(s"localTime = ${localTime}")
+    {
+      val localTime = LocalTime.now
+      val jsTemp = JsTemporal(localTime)
+      assertNoDiff(jsTemp.stringify, s"\"${localTime.toString}\"")
+    }
 
-    val localDT = JsTemporal(LocalDateTime.now)
-    println(s"localDT = ${localDT}")
+    {
+      val localDT = LocalDateTime.now
+      val jsTemp = JsTemporal(localDT)
+      assertNoDiff(jsTemp.stringify, s"\"${localDT.toString}\"")
+    }
 
-    val instant = JsTemporal(Instant.now)
-    println(s"instant = ${instant}")
+    {
+      val instant = Instant.now
+      val jsTemp = JsTemporal(instant)
+      assertNoDiff(jsTemp.stringify, s"\"${instant.toString}\"")
+    }
 
-    val offsetDT = JsTemporal(OffsetDateTime.now)
-    println(s"offsetDT = ${offsetDT}")
+    {
+      val offsetDT = OffsetDateTime.now
+      val jsTemp = JsTemporal(offsetDT)
+      assertNoDiff(jsTemp.stringify, s"\"${offsetDT.toString}\"")
+    }
 
-    val offsetTime = JsTemporal(OffsetTime.now)
-    println(s"offsetTime = ${offsetTime}")
+    {
+      val offsetTime = OffsetTime.now
+      val jsTemp = JsTemporal(offsetTime)
+      assertNoDiff(jsTemp.stringify, s"\"${offsetTime.toString}\"")
+    }
 
-    val zonedDT = JsTemporal(ZonedDateTime.now)
-    println(s"ZonedDT = ${zonedDT}")
+    {
+      val zonedDT = ZonedDateTime.now
+      val jsTemp = JsTemporal(zonedDT)
+      assertNoDiff(jsTemp.stringify, s"\"${zonedDT.toString}\"")
+    }
+
   }
 
   test("Format") {
-    val localDate = JsTemporal(LocalDate.now).jsonFormat("yyyy")
-    println(s"localDate = ${localDate}")
+    val localDate = LocalDate.now
+    val jsTemp = JsTemporal(localDate).jsonFormat("yyyy")
+    assertNoDiff(jsTemp.stringify, s"\"${localDate.getYear}\"")
   }
 
   test("Json Serialization") {
@@ -73,7 +99,7 @@ class JsonTemporalSuite extends munit.FunSuite {
       "jdate2" -> java.util.Date().jsonFormat("yyyy"),
       "jdate3" -> java.util.Date().jsonFormat("yyyy", "Asia/Singapore")
     )
-    println(s"jsObj = ${jsObj}")
+
     assert(jsObj("date1").isInstanceOf[JsTemporal])
     assert(jsObj("date2").isInstanceOf[JsTemporal])
     assert(jsObj("date3").isInstanceOf[JsTemporal])
@@ -109,7 +135,6 @@ class JsonTemporalSuite extends munit.FunSuite {
       "offsetTime" -> zonedDateTime.toOffsetDateTime.toOffsetTime,
       "zonedDT" -> zonedDateTime,
     )
-    println(s"jsObj = ${jsObj}")
     val json = jsObj.stringify
 
     val parsedJson = Json.parse(json).as[JsObject]

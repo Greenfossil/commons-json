@@ -102,29 +102,30 @@ class JsonAsSuite extends munit.FunSuite {
     assertEquals((parsedJson \ "displayname").asOpt[String], None) //Absence of field
   }
 
+  private case class WorkflowResponse(jsonValue: JsObject) {
+    lazy val dataJsonOpt: Option[JsValue] = (jsonValue \ "result" \ "data").toOption
 
-  test("using asOpt in case class".fail){
+    def get[T](key: String): Option[Long] = dataJsonOpt.flatMap(json => (json \ key).asOpt[Long])
+
+    inline def get[T](keys: String*): Option[T] = dataJsonOpt.flatMap { dataJson =>
+      keys.foldLeft(dataJson) { case (json, key) => json \ key }.asOpt[T]
+    }
+  }
+
+  test("using asOpt in case class"){
     //This testcase will fail because `inline` should be use in the WorkflowResponse.get method
     val jsonObject = Json.obj(
       "result" -> Json.obj(
         "data" -> Json.obj(
-          "id" -> 1075L,
+          "id" -> 1075,
           "address" -> Json.obj(
             "street" -> "Ang Mo Kio Ave 5",
             "postalCode" -> "123456",
-            "blk" -> 123L
+            "blk" -> 123
           )
         )
       )
     )
-    case class WorkflowResponse(jsonValue: JsObject) {
-      lazy val dataJsonOpt: Option[JsValue] = (jsonValue \ "result" \ "data").toOption
-      def /*inline is requred*/ get[T](key: String): Option[T] = dataJsonOpt.flatMap(json => (json \ key).asOpt[T])
-
-      inline def get[T](keys: String*): Option[T] = dataJsonOpt.flatMap{ dataJson =>
-        keys.foldLeft(dataJson) { case (json, key) => json \ key }.asOpt[T]
-      }
-    }
 
     val response = WorkflowResponse(jsonObject)
 
@@ -134,10 +135,6 @@ class JsonAsSuite extends munit.FunSuite {
 
     val rs = response.get[Long]("id")
     assertEquals(rs.getOrElse(0L), expected)
-    rs match {
-      case Some(value : Long) => println(s"Long value = ${value}")
-      case None => println("None")
-    }
 
     assertEquals(response.get[String]("address", "street").getOrElse(""), "Ang Mo Kio Ave 5")
     assertEquals(response.get[Long]("address", "blk").getOrElse(0L), 123L)

@@ -56,10 +56,12 @@ class BugFix extends munit.FunSuite {
     def searchJson = Json.obj(
       "patient" -> patientId,
       "orderStatuses" -> Json.arr("SMT")
-//      "orderStatuses" -> Json.arr(Json.obj("name" -> "SMT"), Json.obj("type" -> "prod"))
     )
-
-    println(s"searchJson = ${searchJson}")
+    assertNoDiff(searchJson.prettyPrint, """|{
+                                            |  "patient" : "SYNASPE002",
+                                            |  "orderStatuses" : [ "SMT" ]
+                                            |}
+                                            |""".stripMargin)
 
     val requestJson: JsValue = Json.obj(
       "securityHeader" -> Json.obj(
@@ -70,8 +72,19 @@ class BugFix extends munit.FunSuite {
       "pageSize" -> pageSize,
       "search" -> searchJson
     )
-
-    println(s"requestJson = ${requestJson.toString}")
+    assertNoDiff(requestJson.prettyPrint, """|{
+                                             |  "securityHeader" : {
+                                             |    "state" : "1234567891234",
+                                             |    "sourceSystem" : "eOrdering"
+                                             |  },
+                                             |  "pageNumber" : 0,
+                                             |  "pageSize" : 50,
+                                             |  "search" : {
+                                             |    "patient" : "SYNASPE002",
+                                             |    "orderStatuses" : [ "SMT" ]
+                                             |  }
+                                             |}
+                                             |""".stripMargin)
   }
 
 }
