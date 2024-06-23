@@ -2,7 +2,7 @@ name := "commons-json"
 
 organization := "com.greenfossil"
 
-version := "1.0.11"
+version := "1.0.12-RC1"
 
 scalaVersion := "3.3.3"
 
@@ -12,10 +12,10 @@ Compile / javacOptions ++= Seq("-source", "17")
 
 libraryDependencies ++= Seq(
   //https://github.com/FasterXML/jackson-core
-  "com.fasterxml.jackson.core" % "jackson-databind" % "2.17.0",
+  "com.fasterxml.jackson.core" % "jackson-databind" % "2.17.1",
   "org.slf4j" % "slf4j-api" % "2.0.12",
   "ch.qos.logback" % "logback-classic" % "1.5.6" % Test,
-  "org.scalameta" %% "munit" % "1.0.0-RC1" % Test
+  "org.scalameta" %% "munit" % "1.0.0" % Test
 )
 
 lazy val commonsJson = project.in(file("."))

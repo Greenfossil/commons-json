@@ -26,7 +26,6 @@ import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.ser.Serializers
-import org.slf4j.LoggerFactory
 
 import java.io.StringWriter
 import scala.annotation.{switch, tailrec}
@@ -34,7 +33,6 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
 
 private[json] object JsonModule:
-  val logger = LoggerFactory.getLogger("json-module")
 
   //https://github.com/FasterXML/jackson-databind/issues/2087
   //Setup to use BigDecimal
@@ -92,7 +90,6 @@ private class JsonSerializers extends Serializers.Base:
 
 private class JsValueSerializer extends JsonSerializer[JsValue]:
   override def serialize(value: JsValue, json: JsonGenerator, provider: SerializerProvider): Unit =
-    import JsonModule.logger
     logger.debug(s"Serialize...")
     value match
       case null =>

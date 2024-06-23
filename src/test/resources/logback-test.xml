@@ -12,5 +12,6 @@
 
     <!--  Application  -->
     <logger name="json-module" level="INFO" />
+    <logger name="commons-json" level="INFO" />
 
 </configuration>

@@ -16,7 +16,11 @@
 
 package com.greenfossil.commons.json
 
-import scala.language.implicitConversions
+import org.slf4j.LoggerFactory
+
+import scala.collection.immutable.ArraySeq
+import scala.language.{dynamics, implicitConversions}
+import scala.util.Try
 
 /**
  * https://www.json.org/json-en.html
@@ -25,6 +29,8 @@ import scala.language.implicitConversions
  * https://github.com/FasterXML/jackson-modules-java8
  */
 import java.time.*
+
+private[json] val logger = LoggerFactory.getLogger("commons-json")
 
 type Number = Int | Long | Float | Double | BigDecimal
 
@@ -167,7 +173,7 @@ object JsValue:
     def apply(xs: Option[?]): Option[JsValue] = xs.map(toJsonType)
 
 
-sealed trait JsValue:
+sealed trait JsValue extends Dynamic:
   type A
 
   def value: A
@@ -408,7 +414,12 @@ sealed trait JsValue:
 
   import com.fasterxml.jackson.databind.JsonNode
 
-  val jsonNode: JsonNode = JsonModule.mapper.valueToTree(this)
+  private val jsonNode: JsonNode = JsonModule.mapper.valueToTree(this)
+
+  export jsonNode.{asBoolean, asDouble, asInt, asLong, asText,
+    binaryValue, booleanValue, decimalValue, floatValue, longValue, intValue,
+    isArray, isBigDecimal, isBigInteger, isDouble, isFloat, isInt, isNull, isTextual
+  }
 
   def jsonNodeToJsValue[T <: JsValue](node: JsonNode, clazz: Class[T]): T =
     JsonModule.mapper.treeToValue(node, clazz)
@@ -420,13 +431,26 @@ sealed trait JsValue:
    */
   def at(path: String): JsValue = jsonNodeToJsValue(jsonNode.at(path), classOf[JsValue])
 
-  def \(childIndex: Int): JsValue =
-    if this.isInstanceOf[JsUndefined] then this
-    else jsonNodeToJsValue(jsonNode.get(childIndex), classOf[JsValue])
+  def \(childIndex: Int): JsValue = _get(childIndex)
 
   def \(path: String): JsValue =
     if this.isInstanceOf[JsUndefined] then this
     else jsonNodeToJsValue(jsonNode.at(s"/$path"), classOf[JsValue])
+
+  private def _get(start: Int, count: Int = 1): JsValue =
+    require(count > 0, "count must be positive integer")
+    if !this.isInstanceOf[JsArray] then JsUndefined("Node must be an JsArray")
+    else
+      val length = jsonNode.size()
+      val actualStart = if (start >= 0) start else
+        length + start - (if count == 1 then 0 else 1)
+      val actualEnd = (actualStart + count).min(length)
+      val xs = (actualStart until actualEnd).map{ index =>
+        jsonNodeToJsValue(jsonNode.get(index), classOf[JsValue])
+      }
+      if xs.nonEmpty && count == 1 then xs.head
+      else JsArray( if start >=  0 then xs else xs )
+
 
   /**
    * wild card search or recursive nested search for path
@@ -435,22 +459,47 @@ sealed trait JsValue:
    * @return
    */
   def \\(path: String): JsArray =
-    val jsValues = nodeTraverse(path, jsonNode, List()).map(jsonNode => jsonNodeToJsValue(jsonNode, classOf[JsValue]))
-    JsArray(jsValues)
+    JsArray(_nodeTraverse(path, jsonNode, List(), _ => true))
 
-  private def nodeTraverse(name: String, node: JsonNode, acc: Seq[JsonNode]): Seq[JsonNode] =
+  def find(fieldName: String): Seq[JsValue] = find(fieldName, _ => true)
+
+  def find(fieldName: String, innerFieldValidator: JsValue => Boolean): Seq[JsValue] =
+    _nodeTraverse(fieldName, jsonNode, List(), innerFieldValidator)
+
+  def selectDynamic(name: String): JsValue =
+    if this.isInstanceOf[JsUndefined] then this
+    else jsonNodeToJsValue(jsonNode.at(s"/$name"), classOf[JsValue])
+
+  def applyDynamic(name: String)(args: Int*): JsValue =
+    args match
+      case ArraySeq(index: Int) => selectDynamic(name)._get(index)
+      case ArraySeq(index: Int, length: Int)  => selectDynamic(name)._get(index, length)
+      case _  => throw IllegalArgumentException("Maximum 2 arguments (index, length)")
+
+  private def _nodeTraverse(name: String, node: JsonNode, acc: Seq[JsValue], innerFieldValidator: JsValue => Boolean): Seq[JsValue] =
     import com.fasterxml.jackson.databind.node.ArrayNode
 
     import scala.jdk.CollectionConverters.*
     if node.isObject then
       val fieldNames = node.fieldNames().asScala
       fieldNames.foldLeft(acc) { (res, fieldName) =>
-        if fieldName == name then res :+ node.get(name)
-        else res ++ nodeTraverse(name, node.get(fieldName), acc)
+        if fieldName != name then res ++ _nodeTraverse(name, node.get(fieldName), acc, innerFieldValidator)
+        else
+          val jsNode = node.get(name)
+          val jsValue = jsonNodeToJsValue(jsNode, classOf[JsValue])
+          Try(innerFieldValidator(jsValue))
+            .fold(
+              ex =>
+                logger.warn(s"InnertFieldValidator raised an exception.\nIt is likely the attribute does not exist.\nJsValue: ${jsValue.stringify} ", ex)
+                res,
+              isTrue =>
+                if isTrue then res :+ jsValue
+                else res
+            )
       }
     else if node.isArray then
       val elems = node.asInstanceOf[ArrayNode].elements().asScala
-      elems.foldLeft(acc)((res, e) => res ++ nodeTraverse(name, e, acc))
+      elems.foldLeft(acc)((res, e) => res ++ _nodeTraverse(name, e, acc, innerFieldValidator))
     else acc
 
   @deprecated("use stringify instead")
