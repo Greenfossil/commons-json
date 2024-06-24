@@ -2,13 +2,17 @@ name := "commons-json"
 
 organization := "com.greenfossil"
 
-version := "1.0.12-RC1"
+version := "1.0.12"
 
 scalaVersion := "3.3.3"
 
 scalacOptions ++= Seq("-feature", "-deprecation", "-Wunused:imports")
 
 Compile / javacOptions ++= Seq("-source", "17")
+
+//https://www.scala-sbt.org/1.x/docs/Publishing.html
+ThisBuild / versionScheme := Some("early-semver")
+
 
 libraryDependencies ++= Seq(
   //https://github.com/FasterXML/jackson-core
