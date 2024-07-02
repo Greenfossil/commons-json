@@ -468,7 +468,9 @@ sealed trait JsValue extends Dynamic:
 
   def selectDynamic(name: String): JsValue =
     if this.isInstanceOf[JsUndefined] then this
-    else jsonNodeToJsValue(jsonNode.at(s"/$name"), classOf[JsValue])
+    else
+      val _name = name.replaceFirst("^\\$", "")
+      jsonNodeToJsValue(jsonNode.at(s"/$_name"), classOf[JsValue])
 
   def applyDynamic(name: String)(args: Int*): JsValue =
     args match
