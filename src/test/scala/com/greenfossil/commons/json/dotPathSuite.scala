@@ -44,7 +44,7 @@ class dotPathSuite extends munit.FunSuite {
     assertNoDiff(jsValue.children(-2, 2).as[Seq[String]].mkString(","), "Bart,Maggie")
   }
 
-  test("existing JsNode attributes".only) {
+  test("existing JsNode attributes") {
     val jsObj: JsValue = Json.obj(
       "value" -> Json.obj(
         "value" -> 1
