@@ -54,4 +54,29 @@ class dotPathSuite extends munit.FunSuite {
 
   }
 
+  test("non existing field") {
+    val string =
+      """{
+        |  "identifier" : [{
+        |    "system" : "urn:ietf:rfc:3986",
+        |    "value" : "urn:oid:2.16.840.1.113883.4.642.29.1"
+        |  }]
+        |}""".stripMargin
+    val jsValue = Json.parse(string)
+
+    assertNoDiff(jsValue.identifier(0).system.as[String], "urn:ietf:rfc:3986")
+    assertNoDiff(jsValue.identifier(0).$value.as[String], "urn:oid:2.16.840.1.113883.4.642.29.1")
+    val undefinedField = jsValue.identifier(0).use
+    undefinedField match
+      case JsUndefined(value) => ()
+      case x => fail(s"Should be undefined, found [${x}] class: ${x.getClass.getName}")
+
+    undefinedField.asOpt[String] match
+      case Some(value) =>  fail(s"Should be None, found [$value]")
+      case None => ()
+
+    assertEquals(undefinedField.asOpt[JsValue], None)
+
+  }
+
 }

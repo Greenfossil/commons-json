@@ -395,7 +395,7 @@ sealed trait JsValue extends Dynamic:
       case "JsNumber" =>            jsValueToJsNumber(value, toType)
       case "JsObject" =>            jsValueToJsObject(value, toType)
       case "JsArray" =>             jsValueToJsArray(value, toType)
-      case "JsValue" =>             value
+      case "JsValue" =>             if !value.isInstanceOf[JsUndefined] then value else throw new JsonException(s"Undefined value [${value}]")
       case "Any" =>                 jsValueToAny(value, toType)
       case seq if seq.startsWith("[") =>
         val array = jsValueToJsArray(value, toType)
