@@ -73,4 +73,21 @@ class JsonAsDeserializedSuite extends munit.FunSuite {
     assertEquals((jsonObj \"parent" \ "age").asOpt[Int], None) //parent field is missing
   }
 
+  test("as[String] for JsValue should stringify"){
+    val string  = """{
+      |  "identifier" : [ {
+      |    "system" : {
+      |      "value" : "system 1"
+      |    },
+      |    "value" : {
+      |      "value" : "a value"
+      |    }
+      |  } ]
+      |}""".stripMargin
+
+    val id= Json.parse(string).identifier.as[Seq[JsValue]].head
+    assertEquals(id.system.as[String], """{"value":"system 1"}""")
+    assertEquals(id.$value.as[String], """{"value":"a value"}""")
+  }
+
 }

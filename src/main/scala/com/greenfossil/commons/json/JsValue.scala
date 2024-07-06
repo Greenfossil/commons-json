@@ -214,8 +214,8 @@ sealed trait JsValue extends Dynamic:
       case JsTemporal(value, format, zoneId) => value.toString
       case JsBoolean(value) => value.toString
       case JsNull => null
-      case JsObject(value) => value.toString
-      case JsArray(value) => value.toString
+      case JsObject(value) => jsValue.stringify
+      case JsArray(value) => jsValue.stringify
       case JsUndefined(value) => throw new JsonException(s"Undefined value [${value}]")
 
   private def jsValueToNumber(jsValue: JsValue, tpe: String): Number =
