@@ -511,6 +511,18 @@ sealed trait JsValue extends Dynamic:
   
   def prettyPrint: String = Json.prettyPrint(this)
 
+  transparent inline def showPretty: JsValue =
+    val s = s"\n--------------\nJson Start\n--------------\n${this.prettyPrint}\n------------\nJson End\n------------\n"
+    show(Console.out, s)
+
+  transparent inline def show: JsValue =
+    val s = s"\n--------------\nJson Start\n--------------\n${this.stringify}\n------------\nJson End\n------------\n"
+    show(Console.out, s)
+
+  transparent inline def show(s: java.io.PrintStream, any: Any): JsValue =
+    s.println(any)
+    this
+
   def encodeBase64URL: String = encodeBase64URL("UTF-8")
 
   def encodeBase64URL(charSet: String): String = encodeBase64URL(charSet, false)
