@@ -555,7 +555,7 @@ object JsNumber:
     n match 
       case x: Int => JsNumber(BigDecimal(x))
       case x: Long => JsNumber(BigDecimal(x))
-      case x: Float /*Float is converted to a Double*/=> JsNumber(x.toString.toDouble)
+      case x: Float => JsNumber(BigDecimal(x.toString))
       case x: Double => JsNumber(BigDecimal(x))
       case x: BigDecimal => JsNumber(x)
 
