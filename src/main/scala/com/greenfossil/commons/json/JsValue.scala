@@ -125,6 +125,8 @@ extension(s: String)
     }
     zdt.toTemporal(tpe)
 
+  def $$: JsValue = Json.parse(s)
+
 import scala.compiletime.*
 
 inline private def valueType[T]: String =

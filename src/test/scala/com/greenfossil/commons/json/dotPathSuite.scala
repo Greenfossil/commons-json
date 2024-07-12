@@ -76,7 +76,13 @@ class dotPathSuite extends munit.FunSuite {
       case None => ()
 
     assertEquals(undefinedField.asOpt[JsValue], None)
+  }
 
+  test("$$ aka Json.parse string"){
+    val s = """{"value" : "urn:oid:2.16.840.1.113883.4.642.29.1"}"""
+    val jsValue = Json.parse(s)
+    assertEquals(s.$$, jsValue)
+    assertEquals(s.$$.$value.as[String], "urn:oid:2.16.840.1.113883.4.642.29.1")
   }
 
 }
