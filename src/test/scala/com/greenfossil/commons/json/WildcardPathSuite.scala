@@ -2,7 +2,7 @@ package com.greenfossil.commons.json
 
 class WildcardPathSuite extends munit.FunSuite {
 
-  val s =  """
+  private val jsonString =  """
              |[
              |  {
              |    "name": "Homer",
@@ -45,7 +45,7 @@ class WildcardPathSuite extends munit.FunSuite {
     """.stripMargin
 
   test("Wildcard path") {
-    val json = Json.parse(s)
+    val json = Json.parse(jsonString)
     val xs = (json \\ "contacts").as[Seq[JsObject]]
     assertEquals(xs.size, 4)
     assertEquals(xs.map(_.stringify), List(
@@ -56,9 +56,9 @@ class WildcardPathSuite extends munit.FunSuite {
     ))
   }
 
-  test("Search Parents"){
-    val json = Json.parse(s)
-    val xs = json.find("contacts", _.email.as[String].matches("homer.+|marge.+") )
+  test("Extract using field name"){
+    val json = Json.parse(jsonString)
+    val xs = json.extract("$..contacts[?(@.email =~ /.*(homer|marge).+/i)]")
     assertEquals(xs.size, 2)
     assertEquals(xs.map(_.stringify), List(
       """{"email":"homer.simpson@example.com","phone":"123-456-7890"}""",

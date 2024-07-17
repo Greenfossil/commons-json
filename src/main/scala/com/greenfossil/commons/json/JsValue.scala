@@ -16,6 +16,7 @@
 
 package com.greenfossil.commons.json
 
+import com.jayway.jsonpath.JsonPath
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.ArraySeq
@@ -47,11 +48,14 @@ private def primitiveToJsValue(x: String | Boolean | Number | Temporal | Null | 
     case js: JsValue => js
 
 private def toJsonType(x: Any): JsValue =
+  import scala.jdk.CollectionConverters.*
   x.asInstanceOf[Matchable] match
     case null => null
     case x : (String | Boolean |  Number | Temporal | JsValue) => primitiveToJsValue(x)
     case xs: Array[?] => JsArray(xs.toIndexedSeq.map(toJsonType))
     case obj: Map[?, ?] => JsObject(obj.toList.map(tup2 => tup2._1.toString -> toJsonType(tup2._2)))
+    case jobj: java.util.Map[?, ?] => toJsonType(jobj.asScala.toMap)
+    case jArr: net.minidev.json.JSONArray => JsArray(jArr.stream().map(x => toJsonType(x)).toList.asScala.toList)
     case it: Iterable[?] => JsArray(it.map(toJsonType).toList)
 
 private def longToInstant(len: Int, value: Long): Instant =
@@ -418,7 +422,9 @@ sealed trait JsValue extends Dynamic:
 
   private val jsonNode: JsonNode = JsonModule.mapper.valueToTree(this)
 
-  export jsonNode.{asBoolean, asDouble, asInt, asLong, asText,
+  val _jsonNode: JsonNode = JsonModule.mapper.valueToTree(this)
+
+  export _jsonNode.{asBoolean, asDouble, asInt, asLong, asText,
     binaryValue, booleanValue, decimalValue, floatValue, longValue, intValue,
     isArray, isBigDecimal, isBigInteger, isDouble, isFloat, isInt, isNull, isTextual
   }
@@ -431,24 +437,24 @@ sealed trait JsValue extends Dynamic:
    * @param path - /path/path - need to have a root forward slash
    * @return
    */
-  def at(path: String): JsValue = jsonNodeToJsValue(jsonNode.at(path), classOf[JsValue])
+  def at(path: String): JsValue = jsonNodeToJsValue(_jsonNode.at(path), classOf[JsValue])
 
   def \(childIndex: Int): JsValue = _get(childIndex)
 
   def \(path: String): JsValue =
     if this.isInstanceOf[JsUndefined] then this
-    else jsonNodeToJsValue(jsonNode.at(s"/$path"), classOf[JsValue])
+    else jsonNodeToJsValue(_jsonNode.at(s"/$path"), classOf[JsValue])
 
   private def _get(start: Int, count: Int = 1): JsValue =
     require(count > 0, "count must be positive integer")
     if !this.isInstanceOf[JsArray] then JsUndefined("Node must be an JsArray")
     else
-      val length = jsonNode.size()
+      val length = _jsonNode.size()
       val actualStart = if (start >= 0) start else
         length + start - (if count == 1 then 0 else 1)
       val actualEnd = (actualStart + count).min(length)
       val xs = (actualStart until actualEnd).map{ index =>
-        jsonNodeToJsValue(jsonNode.get(index), classOf[JsValue])
+        jsonNodeToJsValue(_jsonNode.get(index), classOf[JsValue])
       }
       if xs.nonEmpty && count == 1 then xs.head
       else JsArray( if start >=  0 then xs else xs )
@@ -461,18 +467,27 @@ sealed trait JsValue extends Dynamic:
    * @return
    */
   def \\(path: String): JsArray =
-    JsArray(_nodeTraverse(path, jsonNode, List(), _ => true))
+    JsArray(_nodeTraverse(path, _jsonNode, List(), _ => true))
 
-  def find(fieldName: String): Seq[JsValue] = find(fieldName, _ => true)
-
-  def find(fieldName: String, innerFieldValidator: JsValue => Boolean): Seq[JsValue] =
-    _nodeTraverse(fieldName, jsonNode, List(), innerFieldValidator)
+  /**
+   * Extract JsValue using path
+   * https://github.com/json-path/JsonPath
+   * @param path
+   * @return
+   */
+  def extract(path: String): Seq[JsValue] =
+    import scala.jdk.CollectionConverters.*
+    val jsonString = this.stringify
+    JsonPath.parse(jsonString).read(path, classOf[Any]) match
+      case jArr: net.minidev.json.JSONArray =>
+        jArr.stream().map(x => toJsonType(x)).toList.asScala.toList
+      case other => List(toJsonType(other))
 
   def selectDynamic(name: String): JsValue =
     if this.isInstanceOf[JsUndefined] then this
     else
       val _name = name.replaceFirst("^\\$", "")
-      jsonNodeToJsValue(jsonNode.at(s"/$_name"), classOf[JsValue])
+      jsonNodeToJsValue(_jsonNode.at(s"/$_name"), classOf[JsValue])
 
   def applyDynamic(name: String)(args: Int*): JsValue =
     args match
