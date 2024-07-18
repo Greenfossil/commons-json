@@ -16,7 +16,9 @@
 
 package com.greenfossil.commons.json
 
-import com.jayway.jsonpath.JsonPath
+import com.jayway.jsonpath.{Configuration, JsonPath}
+import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider
+import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.ArraySeq
@@ -33,7 +35,7 @@ import java.time.*
 
 private[json] val logger = LoggerFactory.getLogger("commons-json")
 
-type Number = Int | Long | Float | Double | BigDecimal
+type Number = Int | Long | Float | Double | BigDecimal | java.math.BigDecimal
 
 type Temporal = java.util.Date | java.sql.Date | java.sql.Time | java.sql.Timestamp |
   LocalDateTime | LocalDate | LocalTime | Instant | OffsetDateTime | OffsetTime | ZonedDateTime
@@ -54,9 +56,12 @@ private def toJsonType(x: Any): JsValue =
     case x : (String | Boolean |  Number | Temporal | JsValue) => primitiveToJsValue(x)
     case xs: Array[?] => JsArray(xs.toIndexedSeq.map(toJsonType))
     case obj: Map[?, ?] => JsObject(obj.toList.map(tup2 => tup2._1.toString -> toJsonType(tup2._2)))
-    case jobj: java.util.Map[?, ?] => toJsonType(jobj.asScala.toMap)
-    case jArr: net.minidev.json.JSONArray => JsArray(jArr.stream().map(x => toJsonType(x)).toList.asScala.toList)
     case it: Iterable[?] => JsArray(it.map(toJsonType).toList)
+
+    //Java types
+    case jobj: java.util.Map[?, ?] => toJsonType(jobj.asScala.toMap)
+    case jArr: java.util.List[?] =>
+      JsArray(jArr.stream().map(x => toJsonType(x)).toList.asScala.toList)
 
 private def longToInstant(len: Int, value: Long): Instant =
   //If precision is 10 or less, assume it is in seconds
@@ -420,8 +425,6 @@ sealed trait JsValue extends Dynamic:
 
   import com.fasterxml.jackson.databind.JsonNode
 
-  private val jsonNode: JsonNode = JsonModule.mapper.valueToTree(this)
-
   val _jsonNode: JsonNode = JsonModule.mapper.valueToTree(this)
 
   export _jsonNode.{asBoolean, asDouble, asInt, asLong, asText,
@@ -475,13 +478,18 @@ sealed trait JsValue extends Dynamic:
    * @param path
    * @return
    */
+  val _jacksonConfig =  Configuration.builder()
+    .jsonProvider(JacksonJsonNodeJsonProvider())
+    .mappingProvider(JacksonMappingProvider())
+    .build()
+
   def extract(path: String): Seq[JsValue] =
     import scala.jdk.CollectionConverters.*
-    val jsonString = this.stringify
-    JsonPath.parse(jsonString).read(path, classOf[Any]) match
-      case jArr: net.minidev.json.JSONArray =>
-        jArr.stream().map(x => toJsonType(x)).toList.asScala.toList
-      case other => List(toJsonType(other))
+      JsonPath.using(_jacksonConfig).parse(_jsonNode).read(path, classOf[Any]) match
+        case jArr: java.util.ArrayList[?] =>
+          jArr.stream().map(x => toJsonType(x)).toList.asScala.toList
+        case other =>
+          List(toJsonType(other))
 
   def selectDynamic(name: String): JsValue =
     if this.isInstanceOf[JsUndefined] then this
@@ -575,6 +583,7 @@ object JsNumber:
       case x: Float => JsNumber(BigDecimal(x.toString))
       case x: Double => JsNumber(BigDecimal(x))
       case x: BigDecimal => JsNumber(x)
+      case x: java.math.BigDecimal => JsNumber(BigDecimal(x))
 
 case class JsNumber(value: BigDecimal) extends JsValue:
   type A = BigDecimal

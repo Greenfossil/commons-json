@@ -4,10 +4,14 @@ import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.jayway.jsonpath
 import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider
 import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider
-import com.jayway.jsonpath.{Configuration, DocumentContext, JsonPath, TypeRef}
+import com.jayway.jsonpath.{Configuration, DocumentContext, JsonPath}
 
 import java.util
 
+/**
+ * https://github.com/json-path/JsonPath
+ * Testing of the JsonPath library
+ */
 class JsonPathSuite extends munit.FunSuite {
 
   private val jsonString = """{
@@ -57,7 +61,6 @@ class JsonPathSuite extends munit.FunSuite {
     val jsValue = om.readTree(jsonString)
     val dc: DocumentContext = JsonPath.using(jacksonConf).parse(jsValue)
     val books = dc.read[JsonNode]("$.store.book[*]")
-    println(s"storeNode = ${books}")
     assertEquals(books.isArray, true)
     assertEquals(books.size(), 4)
 
@@ -67,22 +70,21 @@ class JsonPathSuite extends munit.FunSuite {
 
   }
 
-  test("base function".only){
+  test("base function".ignore){
   val jacksonConf: Configuration = Configuration.builder()
     .jsonProvider(JacksonJsonNodeJsonProvider())
     .mappingProvider(JacksonMappingProvider())
     .build()
-    val typeRef = new TypeRef[java.util.List[Any]] {}
     val books = JsonPath.parse(jsonString).read("$.store..*", classOf[Any])
     books match {
       case arr: net.minidev.json.JSONArray =>
-        println("array")
+        println(s"return type: JSONArray ${arr.size}")
         arr.iterator().forEachRemaining(e => println(s"e = ${e} ${e.getClass.getCanonicalName}"))
       case map: java.util.Map[?, ?] =>
-        println("Map")
+        println("return type: juMap")
         println(s"map = ${map}")
       case x =>
-      println(s"books = ${x} ${x.getClass.getCanonicalName}")
+      println(s"return type: {x.getClass.getCanonicalName} ${x}")
 
     }
   }
