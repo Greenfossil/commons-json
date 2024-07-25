@@ -167,4 +167,9 @@ class JsObjectSuite extends munit.FunSuite {
 
   }
 
+  test("JsNull stringify"){
+    assertNoDiff(JsNull.stringify, "null")
+  }
+
+
 }

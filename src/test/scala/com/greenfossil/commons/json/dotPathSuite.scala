@@ -85,4 +85,9 @@ class dotPathSuite extends munit.FunSuite {
     assertEquals(s.$$.$value.as[String], "urn:oid:2.16.840.1.113883.4.642.29.1")
   }
 
+  test("JsNull"){
+    assertEquals(JsNull.a, JsUndefined("Handle non-existing keys"))
+    assertEquals(JsNull.a.b, JsUndefined("Handle non-existing keys"))
+  }
+
 }

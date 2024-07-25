@@ -194,7 +194,7 @@ class JsValueExtractSuite extends munit.FunSuite {
 //    all foreach println
   }
 
-  test("The number of books".only) {
+  test("The number of books") {
     val xs = storeJsValue.extract("$..book.length()")
     assertEquals(xs.map(_.asInt()), List(4))
   }

@@ -721,7 +721,7 @@ object JsArray:
 
 case class JsArray(value: Seq[JsValue]) extends JsValue:
   type A = Seq[JsValue]
-  export value.{head, headOption, isEmpty, nonEmpty, collect, map, filter, exists, foldLeft, tail, take, flatMap}
+  export value.{head, headOption, isEmpty, nonEmpty, collect, map, filter, exists, foldLeft, tail, take, flatMap, size}
 
   def ++(otherJsArray: JsArray): JsArray =
     JsArray(value ++ otherJsArray.value)
