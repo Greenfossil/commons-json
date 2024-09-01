@@ -20,9 +20,9 @@ class dotPathSuite extends munit.FunSuite {
     assertNoDiff(jsValue.children(0).as[String], "Bart")
     assertNoDiff(jsValue.children(1).as[String], "Maggie")
     assertNoDiff(jsValue.children(2).as[String], "Lisa")
-    assertEquals[Any, Any](jsValue.addr.value, "Handle non-existing keys")
+    assertEquals[Any, Any](jsValue.addr.value, JsUndefined.missingNode.value)
     assertNoDiff(jsValue.addr.street.stringify, "")
-    assertEquals[Any, Any](jsValue.addr.street.value, "Handle non-existing keys")
+    assertEquals[Any, Any](jsValue.addr.street.value, JsUndefined.missingNode.value)
   }
 
   test("simple dot path with range"){
@@ -86,8 +86,24 @@ class dotPathSuite extends munit.FunSuite {
   }
 
   test("JsNull"){
-    assertEquals(JsNull.a, JsUndefined("Handle non-existing keys"))
-    assertEquals(JsNull.a.b, JsUndefined("Handle non-existing keys"))
+    assertEquals(JsNull.a, JsUndefined.missingNode)
+    assertEquals(JsNull.a.b, JsUndefined.missingNode)
+  }
+
+  test("undefined value") {
+    val obj: JsValue = Json.obj("value" -> 1, "null" -> null)
+
+    //existing field
+    val valueOpt = obj.$value.toOption.map(_.asInt())
+    assertEquals(valueOpt, Some(1))
+
+    //existing field = null value
+    val nullOpt = obj.$null.toOption.map(_.asText())
+    assertEquals(nullOpt, None)
+
+    //missing field
+    val missingOpt = obj.missing.toOption.map(_.asText())
+    assertEquals(missingOpt, None)
   }
 
 }

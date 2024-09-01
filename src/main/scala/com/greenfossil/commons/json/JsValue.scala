@@ -16,6 +16,7 @@
 
 package com.greenfossil.commons.json
 
+import com.fasterxml.jackson.databind.node.MissingNode
 import com.jayway.jsonpath.{Configuration, JsonPath}
 import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider
 import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider
@@ -421,7 +422,8 @@ sealed trait JsValue extends Dynamic:
   inline def asNonNullOpt[T]: Option[T] = 
     scala.util.Try(this.as[T]).toOption.filter(_ != null)
 
-  inline def toOption: Option[JsValue] = asOpt[JsValue].filterNot(_.isInstanceOf[JsUndefined])
+  inline def toOption: Option[JsValue] =
+    asOpt[JsValue].filterNot(x => x.isInstanceOf[JsUndefined] || x == JsNull)
 
   import com.fasterxml.jackson.databind.JsonNode
 
@@ -495,7 +497,9 @@ sealed trait JsValue extends Dynamic:
     if this.isInstanceOf[JsUndefined] then this
     else
       val _name = name.replaceFirst("^\\$", "")
-      jsonNodeToJsValue(_jsonNode.at(s"/$_name"), classOf[JsValue])
+      _jsonNode.at(s"/$_name") match
+        case _: MissingNode => JsUndefined.missingNode
+        case node  => jsonNodeToJsValue(node, classOf[JsValue])
 
   def applyDynamic(name: String)(args: Int*): JsValue =
     args match
@@ -726,6 +730,10 @@ case class JsArray(value: Seq[JsValue]) extends JsValue:
   def ++(otherJsArray: JsArray): JsArray =
     JsArray(value ++ otherJsArray.value)
 
+
+object JsUndefined:
+
+  val missingNode: JsUndefined = JsUndefined("Missing node")
 /**
  * JsUndefined
  * @param value
