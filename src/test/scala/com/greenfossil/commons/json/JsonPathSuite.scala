@@ -6,8 +6,6 @@ import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider
 import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider
 import com.jayway.jsonpath.{Configuration, DocumentContext, JsonPath}
 
-import java.util
-
 /**
  * https://github.com/json-path/JsonPath
  * Testing of the JsonPath library
