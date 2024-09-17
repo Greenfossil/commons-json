@@ -106,4 +106,12 @@ class dotPathSuite extends munit.FunSuite {
     assertEquals(missingOpt, None)
   }
 
+  test("hyphenated name"){
+    val obj1: JsValue = Json.obj("spoken_languages" -> List("English", "Mandarin"))
+    assertEquals(obj1.spoken_languages.as[Seq[String]], Seq("English", "Mandarin"))
+
+    val obj2: JsValue = Json.obj("spoken-languages" -> List("English", "Mandarin"))
+    assertEquals(obj2.`spoken-languages`.as[Seq[String]], Seq("English", "Mandarin"))
+  }
+
 }
