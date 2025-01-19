@@ -114,4 +114,28 @@ class dotPathSuite extends munit.FunSuite {
     assertEquals(obj2.`spoken-languages`.as[Seq[String]], Seq("English", "Mandarin"))
   }
 
+  test("handle edge_type_class as edge_type_class") {
+    val jsonString =
+      """{
+        |  "edge_type_class" : "undirected",
+        |  "adjList" : [ [ "A", [ "B" ] ], [ "B", [ "C" ] ], [ "C", [ "A" ] ] ]
+        |}""".stripMargin
+    val jsValue = Json.parse(jsonString).as[JsValue]
+
+    assertNoDiff(jsValue.edge_type_class.as[String], "undirected")
+    assertEquals(jsValue.adjList.as[JsArray].size, 3)
+  }
+
+  test("handle edge-type-class as edge_type_class. Alternative to hypenated name") {
+    val jsonString =
+      """{
+        |  "edge-type-class" : "undirected",
+        |  "adjList" : [ [ "A", [ "B" ] ], [ "B", [ "C" ] ], [ "C", [ "A" ] ] ]
+        |}""".stripMargin
+    val jsValue = Json.parse(jsonString).as[JsValue]
+
+    assertNoDiff(jsValue.edge_type_class.as[String], "undirected")
+    assertEquals(jsValue.adjList.as[JsArray].size, 3)
+  }
+
 }

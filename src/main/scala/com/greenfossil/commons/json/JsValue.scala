@@ -41,7 +41,9 @@ type Number = Int | Long | Float | Double | BigDecimal | java.math.BigDecimal
 type Temporal = java.util.Date | java.sql.Date | java.sql.Time | java.sql.Timestamp |
   LocalDateTime | LocalDate | LocalTime | Instant | OffsetDateTime | OffsetTime | ZonedDateTime
 
-private def primitiveToJsValue(x: String | Boolean | Number | Temporal | Null | JsValue) : JsValue =
+type JSTYPE = String | Boolean | Number | Temporal
+
+private def primitiveToJsValue(x: JSTYPE | JsValue | Null) : JsValue =
   x match
     case null => JsNull
     case s: String => JsString(s)
@@ -49,20 +51,6 @@ private def primitiveToJsValue(x: String | Boolean | Number | Temporal | Null | 
     case n: Number => JsNumber(n)
     case t: Temporal => JsTemporal(t)
     case js: JsValue => js
-
-private def toJsonType(x: Any): JsValue =
-  import scala.jdk.CollectionConverters.*
-  x.asInstanceOf[Matchable] match
-    case null => null
-    case x : (String | Boolean |  Number | Temporal | JsValue) => primitiveToJsValue(x)
-    case xs: Array[?] => JsArray(xs.toIndexedSeq.map(toJsonType))
-    case obj: Map[?, ?] => JsObject(obj.toList.map(tup2 => tup2._1.toString -> toJsonType(tup2._2)))
-    case it: Iterable[?] => JsArray(it.map(toJsonType).toList)
-
-    //Java types
-    case jobj: java.util.Map[?, ?] => toJsonType(jobj.asScala.toMap)
-    case jArr: java.util.List[?] =>
-      JsArray(jArr.stream().map(x => toJsonType(x)).toList.asScala.toList)
 
 private def longToInstant(len: Int, value: Long): Instant =
   //If precision is 10 or less, assume it is in seconds
@@ -173,16 +161,49 @@ inline private def valueType[T]: String =
 object JsValue:
 
   given Conversion[String | Boolean | Number | Temporal | Null, JsValue] =
-    toJsonType(_)
+    toJsValue(_)
 
   given Conversion[Seq[?], JsArray] with
-    def apply(xs: Seq[?]): JsArray = JsArray(xs.map(toJsonType))
+    def apply(xs: Seq[?]): JsArray = JsArray(xs.map(toJsValue))
 
   given Conversion[Set[?], JsArray] with
-    def apply(xs: Set[?]): JsArray = JsArray(xs.toSeq.map(toJsonType))
+    def apply(xs: Set[?]): JsArray = JsArray(xs.toSeq.map(toJsValue))
 
   given Conversion[Option[?], Option[JsValue]] with
-    def apply(xs: Option[?]): Option[JsValue] = xs.map(toJsonType)
+    def apply(xs: Option[?]): Option[JsValue] = xs.map(toJsValue)
+
+  /**
+   *
+   * @param x
+   * @return
+   */
+  def toJsValue(x: Any): JsValue =
+    val tupleSerializer: PartialFunction[Any, JsValue] =
+      case tup: Tuple => tup.productIterator.map(toJsValue).toSeq
+    toJsValue(x, tupleSerializer)
+
+  /**
+   *
+   * @param x
+   * @param tupleSerializer - control how tuple value is serialized
+   * @return
+   */
+  def toJsValue(x: Any, tupleSerializer: PartialFunction[Any, JsValue]): JsValue =
+    import scala.jdk.CollectionConverters.*
+    x.asInstanceOf[Matchable] match
+      case null => null
+      case x: (String | Boolean | Number | Temporal | JsValue) => primitiveToJsValue(x)
+      case xs: Array[?] => JsArray(xs.toIndexedSeq.map(toJsValue(_, tupleSerializer)))
+      case obj: Map[?, ?] => JsObject(obj.toList.map(tup2 => tup2._1.toString -> toJsValue(tup2._2, tupleSerializer)))
+      case it: Iterable[?] => JsArray(it.map(toJsValue(_, tupleSerializer)).toList)
+
+      //Java types
+      case jobj: java.util.Map[?, ?] => toJsValue(jobj.asScala.toMap, tupleSerializer)
+      case jArr: java.util.List[?] =>
+        JsArray(jArr.stream().map(x => toJsValue(x, tupleSerializer)).toList.asScala.toList)
+
+      case any if tupleSerializer != null && tupleSerializer.isDefinedAt(any) => tupleSerializer(any)
+      case any => throw new JsonException(s"jsValueFn is not defined for ${any.getClass.getName} with value ${any}")
 
 
 sealed trait JsValue extends Dynamic:
@@ -416,9 +437,18 @@ sealed trait JsValue extends Dynamic:
 
   inline def as[T]: T = asValue(this, valueType[T]).asInstanceOf[T]
 
+  /**
+   * 
+   * @tparam T
+   * @return - None if field does not exist else Some(value) including Some(null)
+   */
   inline def asOpt[T]: Option[T] = 
     scala.util.Try(this.as[T]).toOption
-  
+  /**
+   * 
+   * @tparam T
+   * @return - None if field does not exist or null else Some(value)
+   */
   inline def asNonNullOpt[T]: Option[T] = 
     scala.util.Try(this.as[T]).toOption.filter(_ != null)
 
@@ -485,20 +515,35 @@ sealed trait JsValue extends Dynamic:
     .mappingProvider(JacksonMappingProvider())
     .build()
 
+  /**
+   *
+   * @param path
+   * @return
+   */
   def extract(path: String): Seq[JsValue] =
     import scala.jdk.CollectionConverters.*
       JsonPath.using(_jacksonConfig).parse(_jsonNode).read(path, classOf[Any]) match
         case jArr: java.util.ArrayList[?] =>
-          jArr.stream().map(x => toJsonType(x)).toList.asScala.toList
+          jArr.stream().map(x => JsValue.toJsValue(x)).toList.asScala.toList
         case other =>
-          List(toJsonType(other))
+          List(JsValue.toJsValue(other))
 
+  /**
+   *
+   * @param name
+   * @return
+   */
   def selectDynamic(name: String): JsValue =
     if this.isInstanceOf[JsUndefined] then this
     else
       val _name = name.replaceFirst("^\\$", "")
       _jsonNode.at(s"/$_name") match
-        case _: MissingNode => JsUndefined.missingNode
+        case _: MissingNode =>
+          /*
+           * if name contains '_' then try to find a name with '-' else fail search
+           */
+          if name.contains("_") then selectDynamic(name.replaceAll("_", "-"))
+          else JsUndefined.missingNode
         case node  => jsonNodeToJsValue(node, classOf[JsValue])
 
   def applyDynamic(name: String)(args: Int*): JsValue =

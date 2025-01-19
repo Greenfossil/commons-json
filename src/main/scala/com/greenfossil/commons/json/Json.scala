@@ -94,11 +94,11 @@ object Json:
     else Option(jsValue)
 
   def toJson(obj: Map[String, Any]): JsObject =
-    JsObject(obj.toList.map(entry => entry._1 -> toJsonType(entry._2)))
+    JsObject(obj.toList.map(entry => entry._1 -> JsValue.toJsValue(entry._2)))
 
   def toJson[T](head: T, tail: T*): JsArray = toJson(head +: tail)
 
-  def toJson(seq: Seq[?]): JsArray = JsArray(seq.map(toJsonType))
+  def toJson(seq: Seq[?]): JsArray = JsArray(seq.map(JsValue.toJsValue))
     
   def toBytes(json: JsValue): Array[Byte] = mapper.writeValueAsBytes(json)
 
