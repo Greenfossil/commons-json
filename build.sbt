@@ -2,7 +2,7 @@ name := "commons-json"
 
 organization := "com.greenfossil"
 
-version := "1.2.0"
+version := "1.2.1-RC1"
 
 scalaVersion := "3.6.3"
 
@@ -16,7 +16,7 @@ ThisBuild / versionScheme := Some("early-semver")
 
 libraryDependencies ++= Seq(
   //https://github.com/FasterXML/jackson-core
-  "com.fasterxml.jackson.core" % "jackson-databind" % "2.18.1",
+  "com.fasterxml.jackson.core" % "jackson-databind" % "2.18.2",
   "com.jayway.jsonpath" % "json-path" % "2.9.0",
   "org.slf4j" % "slf4j-api" % "2.0.16",
   "ch.qos.logback" % "logback-classic" % "1.5.16" % Test,
