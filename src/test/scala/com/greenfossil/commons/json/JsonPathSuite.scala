@@ -1,7 +1,6 @@
 package com.greenfossil.commons.json
 
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
-import com.jayway.jsonpath
 import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider
 import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider
 import com.jayway.jsonpath.{Configuration, DocumentContext, JsonPath}
