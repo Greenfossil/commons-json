@@ -36,6 +36,10 @@ import java.time.*
 
 private[json] val logger = LoggerFactory.getLogger("commons-json")
 
+inline private def logWarnAndThrow(msg: String): Nothing =
+  logger.warn(msg)
+  throw new JsonException(msg)
+
 type Number = Int | Long | Float | Double | BigDecimal | java.math.BigDecimal
 
 type Temporal = java.util.Date | java.sql.Date | java.sql.Time | java.sql.Timestamp |
@@ -203,8 +207,8 @@ object JsValue:
         JsArray(jArr.stream().map(x => toJsValue(x, tupleSerializer)).toList.asScala.toList)
 
       case any if tupleSerializer != null && tupleSerializer.isDefinedAt(any) => tupleSerializer(any)
-      case any => throw new JsonException(s"jsValueFn is not defined for ${any.getClass.getName} with value ${any}")
-
+      case unsupported =>
+        logWarnAndThrow(s"toJsValue conversion error from unsupported type: [$unsupported], type:${unsupported.getClass.getName}.")
 
 sealed trait JsValue extends Dynamic:
   type A
@@ -227,18 +231,20 @@ sealed trait JsValue extends Dynamic:
           case t: ZonedDateTime => t.toTemporal(toType)
           case t: java.util.Date => t.toTemporal(toType)
       case JsNull => null
-      case unsupported => throw new JsonException(s"Temporal Conversion error for unsupported ${unsupported}")
+      case unsupported =>
+       logWarnAndThrow(s"jsValueToTemporal conversion for unsupported error: [$unsupported] type:${unsupported.getClass.getName}.")
 
   private def jsValueToBoolean(jsValue: JsValue, tpe: String): Boolean =
     jsValue match
       case JsString(value) => value.toBooleanOption.getOrElse(false)
       case JsNumber(value) => value > 0
-      case JsTemporal(value, format, zoneId) => throw new JsonException(s"Temporal Conversion error for unsupported ${jsValue}")
+      case JsTemporal(value, format, zoneId) =>
+        logWarnAndThrow(s"jsValueToBoolean conversion from JsTemporal error: [$value with format $format and zoneId $zoneId].")
       case JsBoolean(value) => value
       case JsNull => false
       case JsObject(value) => value.isEmpty
       case JsArray(value) => value.isEmpty
-      case JsUndefined(value) => throw new JsonException(s"Undefined value [${value}]")
+      case JsUndefined(value) => logWarnAndThrow(s"jsValueToBoolean conversion from JsUndefined error: [$value].")
 
   private def jsValueToString(jsValue: JsValue, tpe: String): String =
     jsValue match
@@ -249,7 +255,8 @@ sealed trait JsValue extends Dynamic:
       case JsNull => null
       case JsObject(value) => jsValue.stringify
       case JsArray(value) => jsValue.stringify
-      case JsUndefined(value) => throw new JsonException(s"Undefined value [${value}]")
+      case JsUndefined(value) =>
+        logWarnAndThrow(s"jsValueToString conversion from JsUndefined error: [$value].")
 
   private def jsValueToNumber(jsValue: JsValue, tpe: String): Number =
     jsValue match
@@ -268,8 +275,12 @@ sealed trait JsValue extends Dynamic:
           case "Float" => value.toFloat
           case "Double" => value.toDouble
           case _ => value
-      case JsUndefined(value) => throw new JsonException(s"Undefined value [${value}]")
-      case unsupported => throw new JsonException(s"Number conversion error for unsupported ${unsupported}. JsTemporal, JsNull, JsObject, JsArray are not supported")
+      case JsNull => logWarnAndThrow(s"jsValueToNumber conversion from JsNull error.")
+      case JsUndefined(value) =>
+        logWarnAndThrow(s"jsValueToNumber conversion from JsUndefined error: [$value].")
+
+      case unsupported =>
+        logWarnAndThrow(s"jsValueToNumber conversion from unsupported type error: [$unsupported] type:${unsupported.getClass.getName}.")
 
   private def jsValueToArray(jsValue: JsValue, tpe: String): Seq[Any] =
     jsValue match
@@ -292,7 +303,7 @@ sealed trait JsValue extends Dynamic:
         }
         fields
       case JsArray(value) => value.map(v => asValue(v, tpe))
-      case JsUndefined(value) => throw new JsonException(s"Undefined value [${value}]")
+      case JsUndefined(value) => logWarnAndThrow(s"jsValueToArray conversion from JsUndefined error: [$value].")
 
   private def jsValueToObject(jsValue: JsValue, tpe: String): Map[String, Any] =
     jsValue match
@@ -330,7 +341,7 @@ sealed trait JsValue extends Dynamic:
         }
         fields.toMap
 
-      case JsUndefined(value) => throw new JsonException(s"Undefined value [${value}]")
+      case JsUndefined(value) => logWarnAndThrow(s"jsValueToObject conversion to JsUndefined error: [$value].")
 
   private def jsValueToAny(x: JsValue, tpe: String): Any =
     x match
@@ -341,7 +352,7 @@ sealed trait JsValue extends Dynamic:
       case JsNull => null
       case value: JsObject => jsValueToObject(value, "Any")
       case value: JsArray => jsValueToArray(value, "Any")
-      case JsUndefined(value)=> throw new JsonException(s"Undefined value [${value}]")
+      case JsUndefined(value)=> logWarnAndThrow(s"jsValueToAny conversion from JsUndefined error: [$value].")
 
   private def jsValueToJsTemporal(jsValue: JsValue, tpe: String) =
     jsValue match
@@ -349,8 +360,8 @@ sealed trait JsValue extends Dynamic:
       case JsNumber(bd) => JsTemporal(longToInstant(bd.precision, bd.longValue))
       case value : JsTemporal => value
       case JsNull => JsNull
-      case JsUndefined(value) => throw new JsonException(s"Undefined value [${value}]")
-      case unsupported => throw new JsonException(s"JsTemporal Conversion error for unsupported ${unsupported}. JsObject and JsArray are not supported")
+      case JsUndefined(value) => logWarnAndThrow(s"jsValueToJsTemporal conversion to JsUndefined error: [$value].")
+      case unsupported => logWarnAndThrow(s"jsValueToJsTemporal conversion to unsupported type error: [$unsupported] type:${unsupported.getClass.getName}.")
 
   private def jsValueToJsString(jsValue: JsValue, tpe: String): JsString =
     jsValue match
@@ -361,7 +372,7 @@ sealed trait JsValue extends Dynamic:
       case JsNull => JsString(null)
       case JsObject(value) => JsString(value.toString())
       case JsArray(value) => JsString(value.toString())
-      case JsUndefined(value) => throw new JsonException(s"Undefined value [${value}]")
+      case JsUndefined(value) => logWarnAndThrow(s"jsValueToJsString conversion to JsUndefined error: [$value].")
 
   private def jsValueToJsBoolean(jsValue: JsValue, tpe: String): JsBoolean =
     jsValue match
@@ -372,7 +383,7 @@ sealed trait JsValue extends Dynamic:
       case JsNull => JsBoolean(false)
       case JsObject(value) => JsBoolean(value.isEmpty)
       case JsArray(value) => JsBoolean(value.isEmpty)
-      case JsUndefined(value) => throw new JsonException(s"Undefined value [${value}]")
+      case JsUndefined(value) => logWarnAndThrow(s"jsValueToJsBoolean conversion to JsUndefined value [$value].")
 
   private def jsValueToJsNumber(jsValue: JsValue, tpe: String): JsNumber =
     jsValue match
@@ -380,14 +391,14 @@ sealed trait JsValue extends Dynamic:
       case value: JsNumber => value
       case JsBoolean(value) => JsNumber( if value then 1 else 0)
       case JsNull => JsNumber(null)
-      case JsUndefined(value) => throw new JsonException(s"Undefined value [${value}]")
-      case unsupported => throw new JsonException(s"JsNumber Conversion error unsupported ${unsupported}. JsTemporal, JsObject and JsArray are not supported")
+      case JsUndefined(value) => logWarnAndThrow(s"jsValueToJsNumber conversion to JsUndefined error: [$value].")
+      case unsupported => logWarnAndThrow(s"jsValueToJsNumber conversion to unsupported type error: [$unsupported] type:${unsupported.getClass.getName}.")
 
   private def jsValueToJsObject(jsValue: JsValue, tpe: String): JsObject =
     jsValue match
       case value: JsObject => value
-      case JsUndefined(value) => throw new JsonException(s"Undefined value [${value}]")
-      case unsupported => throw new JsonException(s"JsObject Conversion error unsupported ${unsupported}. Only JsObject is supported")
+      case JsUndefined(value) => logWarnAndThrow(s"jsValueToJsObject conversion to JsUndefined error: [$value].")
+      case unsupported => logWarnAndThrow(s"jsValueToJsObject conversion to unsupported type error: [$unsupported] type:${unsupported.getClass.getName}.")
 
   private def jsValueToJsArray(x: JsValue, tpe: String): JsArray =
     x match
@@ -397,8 +408,10 @@ sealed trait JsValue extends Dynamic:
       case value: JsBoolean => JsArray(value)
       case JsNull => JsArray.empty
       case value: JsArray => value
-      case JsUndefined(value) => throw new JsonException(s"Undefined value [${value}]")
-      case unsupported => throw new JsonException(s"JsArray Conversion error unsupported ${unsupported}. JsObject is not supported")
+      case JsUndefined(value) =>
+        logWarnAndThrow(s"jsValueToJsArray conversion to JsUndefined error: [$value].")
+      case unsupported =>
+        logWarnAndThrow(s"jsValueToJsArray conversion to unsupported error: [$unsupported] type:${unsupported.getClass.getName}.")
 
   def asValue(value: JsValue, toType: String): Any =
     //If T is a Type of JsValue use it T else use getValue.asInstanceOf[T]
@@ -426,40 +439,157 @@ sealed trait JsValue extends Dynamic:
       case "JsString" =>            jsValueToJsString(value, toType)
       case "JsBoolean" =>           jsValueToJsBoolean(value, toType)
       case "JsNumber" =>            jsValueToJsNumber(value, toType)
-      case "JsObject" =>            jsValueToJsObject(value, toType)
+      case "JsObject" =>
+        value match {
+          case s: JsString if s.value.stripLeading.startsWith("{")  => Json.parse(s.value).as[JsObject]
+          case _ => jsValueToJsObject(value, toType)
+        }
       case "JsArray" =>             jsValueToJsArray(value, toType)
-      case "JsValue" =>             if !value.isInstanceOf[JsUndefined] then value else throw new JsonException(s"Undefined value [${value}]")
+      case "JsValue" =>             if !value.isInstanceOf[JsUndefined] then value else
+        logWarnAndThrow(s"asJsValue for JsUndefined error: [$value].")
       case "Any" =>                 jsValueToAny(value, toType)
       case seq if seq.startsWith("[") =>
-        val array = jsValueToJsArray(value, toType)
+        val array = {
+          //If value is JsString wrapping the JsArray, convert the String to a JsArray
+          value match 
+            case s: JsString if s.value.stripLeading.startsWith("[")  => Json.parse(s.value).as[JsArray]
+            case _ => jsValueToJsArray(value, toType)
+        }
         array.value.map(v => asValue(v, seq.drop(1)))
-      case unsupportedType => throw new JsonException(s"Conversion error: unsupported-type:${unsupportedType} for value [${value}]")
+      case unsupportedType => logWarnAndThrow(s"asJsValue conversion to unsupported type error: [$unsupportedType] type:${value.getClass.getName}.")
 
   inline def as[T]: T = asValue(this, valueType[T]).asInstanceOf[T]
 
+  inline def asText: String = as[String]
+
+  inline def asTextOrNull: String = asOpt[String].orNull
+
+  inline def asTextOrEmpty: String = asOpt[String].getOrElse("")
+
+  inline def asTextOrElse(default: String): String = asOpt[String].getOrElse(default)
+
+  inline def asTextOpt: Option[String] = asOpt[String]
+
+  inline def asBoolean: Boolean = as[Boolean]
+
+  inline def asBooleanOrFalse: Boolean = asOpt[Boolean].getOrElse(false)
+
+  inline def asBooleanOrTrue: Boolean = asOpt[Boolean].getOrElse(true)
+
+  inline def asBooleanOrElse(default: Boolean): Boolean = asOpt[Boolean].getOrElse(default)
+
+  inline def asBooleanOpt: Option[Boolean] = asOpt[Boolean]
+
+  inline def asInt: Int = as[Int]
+
+  inline def asIntOrElse(default: Int): Int = asOpt[Int].getOrElse(default)
+
+  inline def asIntOpt: Option[Int] = asOpt[Int]
+
+  inline def asLong: Long = as[Long]
+
+  inline def asLongOrElse(default: Long): Long = asOpt[Long].getOrElse(default)
+
+  inline def asLongOpt: Option[Long] = asOpt[Long]
+
+  inline def asFloat: Float = as[Float]
+
+  inline def asFloatOrElse(default: Float): Float = asOpt[Float].getOrElse(default)
+
+  inline def asFloatOpt: Option[Float] = asOpt[Float]
+
+  inline def asDouble: Double = as[Double]
+
+  inline def asDoubleOrElse(default: Double): Double = asOpt[Double].getOrElse(default)
+
+  inline def asDoubleOpt: Option[Double] = asOpt[Double]
+
+  inline def asBigDecimal: BigDecimal = as[BigDecimal]
+
+  inline def asBigDecimalOrElse(default: BigDecimal): BigDecimal = asOpt[BigDecimal].getOrElse(default)
+
+  inline def asBigDecimalOpt: Option[BigDecimal] = asOpt[BigDecimal]
+
+  inline def asSeq[T]: Seq[T] = as[Seq[T]]
+
+  inline def asSeqOrEmpty[T]: Seq[T] = asOpt[Seq[T]].getOrElse(Seq.empty)
+
+  inline def asSeqOrElse[T](default: Seq[T]): Seq[T] = asOpt[Seq[T]].getOrElse(default)
+  
+  inline def asSeqOpt[T]: Option[Seq[T]] = asOpt[Seq[T]]
+
+  inline def asJsObject: JsObject = as[JsObject]
+
+  inline def asJsObjectOrEmpty: JsObject = asOpt[JsObject].getOrElse(JsObject.empty)
+
+  inline def asJsObjectOrElse(default: JsObject): JsObject = asOpt[JsObject].getOrElse(default)
+
+  inline def asJsObjectOpt: Option[JsObject] = asOpt[JsObject]
+
+  inline def asJsArray: JsArray = as[JsArray]
+
+  inline def asJsArrayOrEmpty: JsArray = asOpt[JsArray].getOrElse(JsArray.empty)
+
+  inline def asJsArrayOrElse(default: JsArray): JsArray = asOpt[JsArray].getOrElse(default)
+
+  inline def asJsArrayOpt: Option[JsArray] = asOpt[JsArray]
+
+
   /**
-   * 
+   * Note: This method much be implemented as inline method to enshure type 'T' is known at compile time.
    * @tparam T
    * @return - None if field does not exist else Some(value) including Some(null)
    */
-  inline def asOpt[T]: Option[T] = 
-    scala.util.Try(this.as[T]).toOption
+  inline def asOpt[T]: Option[T] =
+    inline this match {
+      case JsUndefined(_) => Option.empty[T]
+      case JsNull => Option.empty[T]
+      case _ =>
+        /*
+         * This code block exists runtime
+         * Since this is an asOpt method. To prevent a false positive, check for JsUndefined to avoid throwing exception within as[T]
+         */
+        this match {
+          case JsUndefined(_) => Option.empty[T]
+          case _ => Try(this.as[T]).toOption
+        }
+    }
+
   /**
    * 
    * @tparam T
    * @return - None if field does not exist or null else Some(value)
    */
-  inline def asNonNullOpt[T]: Option[T] = 
-    scala.util.Try(this.as[T]).toOption.filter(_ != null)
+  inline def asNonNullOpt[T]: Option[T] =
+    inline this match {
+      case JsUndefined(value) => Option.empty[T]
+      case JsNull => Option.empty[T]
+      case _ =>
+        /*
+         * This code block exists runtime
+         * Since this is an asOpt method. To prevent a false positive, check for JsUndefined to avoid throwing exception within as[T]
+         * THis check for JsNull and will return None to skip the conversion
+         */
+        this match {
+          case JsUndefined(_) => Option.empty[T]
+          case JsNull => Option.empty[T]
+          case _ => Try(this.as[T]).toOption
+        }
 
-  inline def toOption: Option[JsValue] =
-    asOpt[JsValue].filterNot(x => x.isInstanceOf[JsUndefined] || x == JsNull)
+    }
+
+  def toOption: Option[JsValue] =
+    this match {
+      case JsNull => None
+      case JsUndefined(_) => None
+      case _ => Option(this)
+    }
 
   import com.fasterxml.jackson.databind.JsonNode
 
   val _jsonNode: JsonNode = JsonModule.mapper.valueToTree(this)
 
-  export _jsonNode.{asBoolean, asDouble, asInt, asLong, asText,
+  export _jsonNode.{
     binaryValue, booleanValue, decimalValue, floatValue, longValue, intValue,
     isArray, isBigDecimal, isBigInteger, isDouble, isFloat, isInt, isNull, isTextual
   }
@@ -528,6 +658,11 @@ sealed trait JsValue extends Dynamic:
         case other =>
           List(JsValue.toJsValue(other))
 
+  def `**`: JsWildCard =
+    if this.isInstanceOf[JsWildCard] then
+      logWarnAndThrow("JsWildCard '>>' cannot be used sequentially. Remove all except the first '>>' operator.")
+    else JsWildCard(this)
+
   /**
    *
    * @param name
@@ -535,7 +670,13 @@ sealed trait JsValue extends Dynamic:
    */
   def selectDynamic(name: String): JsValue =
     if this.isInstanceOf[JsUndefined] then this
-    else
+    else{
+      /*
+       * Remove the escaped $ sign from the name if exists.
+       * Find name using _name, if fails then try to find name with '-' instead of '_' else fail search
+       * If node is found, then check if it is a WildCard, if so then traverse the node and return all values
+       * else return the node as JsValue
+       */
       val _name = name.replaceFirst("^\\$", "")
       _jsonNode.at(s"/$_name") match
         case _: MissingNode =>
@@ -543,14 +684,20 @@ sealed trait JsValue extends Dynamic:
            * if name contains '_' then try to find a name with '-' else fail search
            */
           if name.contains("_") then selectDynamic(name.replaceAll("_", "-"))
-          else JsUndefined.missingNode
-        case node  => jsonNodeToJsValue(node, classOf[JsValue])
+          else JsUndefined.missingNode(name)
+        case node =>
+          this match {
+            case wc: JsWildCard =>
+              JsArray(_nodeTraverse(_name, wc._jsonNode, List(), _ => true))
+            case _ => jsonNodeToJsValue(node, classOf[JsValue])
+          }
+    }
 
   def applyDynamic(name: String)(args: Int*): JsValue =
     args match
       case ArraySeq(index: Int) => selectDynamic(name)._get(index)
       case ArraySeq(index: Int, length: Int)  => selectDynamic(name)._get(index, length)
-      case _  => throw IllegalArgumentException("Maximum 2 arguments (index, length)")
+      case _  => logWarnAndThrow("Maximum 2 arguments (index, length)")
 
   private def _nodeTraverse(name: String, node: JsonNode, acc: Seq[JsValue], innerFieldValidator: JsValue => Boolean): Seq[JsValue] =
     import com.fasterxml.jackson.databind.node.ArrayNode
@@ -715,7 +862,7 @@ case class JsObject(value: immutable.ListMap[String, JsValue]) extends JsValue:
     if nonNullFields == fields then this
     else JsObject(nonNullFields)
 
-  def apply(field: String): JsValue = value.getOrElse(field, JsUndefined(s"Field ${field} does not exists"))
+  def apply(field: String): JsValue = value.getOrElse(field, JsUndefined(s"Field named:'$field' does not exists."))
 
   def ++ (otherObj: JsObject): JsObject =
     JsObject(value ++ otherObj.value)
@@ -775,10 +922,13 @@ case class JsArray(value: Seq[JsValue]) extends JsValue:
   def ++(otherJsArray: JsArray): JsArray =
     JsArray(value ++ otherJsArray.value)
 
+case class JsWildCard(value: JsValue) extends JsValue :
+  type A = JsValue
+end JsWildCard
 
 object JsUndefined:
 
-  val missingNode: JsUndefined = JsUndefined("Missing node")
+  def missingNode(msg: String): JsUndefined = JsUndefined(s"Missing node:[$msg].")
 /**
  * JsUndefined
  * @param value

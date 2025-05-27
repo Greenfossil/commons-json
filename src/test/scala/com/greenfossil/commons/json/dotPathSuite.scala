@@ -20,9 +20,9 @@ class dotPathSuite extends munit.FunSuite {
     assertNoDiff(jsValue.children(0).as[String], "Bart")
     assertNoDiff(jsValue.children(1).as[String], "Maggie")
     assertNoDiff(jsValue.children(2).as[String], "Lisa")
-    assertEquals[Any, Any](jsValue.addr.value, JsUndefined.missingNode.value)
+    assertEquals[Any, Any](jsValue.addr.value, JsUndefined.missingNode("addr").value)
     assertNoDiff(jsValue.addr.street.stringify, "")
-    assertEquals[Any, Any](jsValue.addr.street.value, JsUndefined.missingNode.value)
+    assertEquals[Any, Any](jsValue.addr.street.value, JsUndefined.missingNode("addr").value)
   }
 
   test("simple dot path with range"){
@@ -50,7 +50,7 @@ class dotPathSuite extends munit.FunSuite {
         "value" -> 1
       )
     )
-    assertEquals(jsObj.$value.$value.asInt(), 1)
+    assertEquals(jsObj.$value.$value.asInt, 1)
 
   }
 
@@ -86,23 +86,23 @@ class dotPathSuite extends munit.FunSuite {
   }
 
   test("JsNull"){
-    assertEquals(JsNull.a, JsUndefined.missingNode)
-    assertEquals(JsNull.a.b, JsUndefined.missingNode)
+    assertEquals(JsNull.a, JsUndefined.missingNode("a"))
+    assertEquals(JsNull.a.b, JsUndefined.missingNode("a"))
   }
 
   test("undefined value") {
     val obj: JsValue = Json.obj("value" -> 1, "null" -> null)
 
     //existing field
-    val valueOpt = obj.$value.toOption.map(_.asInt())
+    val valueOpt = obj.$value.toOption.map(_.asInt)
     assertEquals(valueOpt, Some(1))
 
     //existing field = null value
-    val nullOpt = obj.$null.toOption.map(_.asText())
+    val nullOpt = obj.$null.toOption.map(_.asText)
     assertEquals(nullOpt, None)
 
     //missing field
-    val missingOpt = obj.missing.toOption.map(_.asText())
+    val missingOpt = obj.missing.toOption.map(_.asText)
     assertEquals(missingOpt, None)
   }
 
@@ -136,6 +136,52 @@ class dotPathSuite extends munit.FunSuite {
 
     assertNoDiff(jsValue.edge_type_class.as[String], "undirected")
     assertEquals(jsValue.adjList.as[JsArray].size, 3)
+  }
+
+  test("Fluent wild card .** ") {
+    val jsonObj = Json.obj(
+      "name" -> "Homer",
+      "age" -> 55,
+      "spouse" -> Json.obj(
+        "name" -> "Marge",
+        "age" -> 50
+      )
+    )
+
+    assertEquals(jsonObj.spouse.name.asText, "Marge")
+    assertEquals(jsonObj.spouse.age.asInt, 50)
+
+    /*using wildcard '.**' */
+    assertEquals(jsonObj.**.name.asSeq[String], Seq("Homer", "Marge"))
+    assertEquals(jsonObj.**.parent.asSeqOrEmpty[String], Nil)
+
+    assertEquals(jsonObj.spouse.occupation.asTextOpt, None)
+    assertEquals(jsonObj.parent.age.asIntOpt, None) //parent field is missing
+  }
+
+  test("wild card .**") {
+    val json = """{
+                 |  "role" : "assistant",
+                 |  "tool_calls" : [ {
+                 |    "id" : "206625709",
+                 |    "type" : "function",
+                 |    "function" : {
+                 |      "name" : "foo",
+                 |      "arguments" : {}
+                 |    }
+                 |  } ]
+                 |}""".stripMargin
+    val jsValue = Json.parse(json)
+
+    val toolCallsWC = jsValue.**.tool_calls.asSeqOrEmpty[Seq[JsObject]].flatten
+    val toolCalls = jsValue.tool_calls.asSeqOrEmpty[JsObject]
+    assertEquals(toolCallsWC, toolCalls)
+    assertEquals(toolCalls.size, 1)
+    assertEquals(toolCalls(0).id.asText, "206625709")
+    assertEquals(toolCalls(0).$type.asText, "function")
+    assertEquals(toolCalls(0).function.name.asText, "foo")
+    assertEquals(toolCalls(0).function.arguments.asText, "{}")
+
   }
 
 }

@@ -131,12 +131,12 @@ class JsValueExtractSuite extends munit.FunSuite {
 
   test("extract all authors"){
     val authors = storeJsValue.extract("$.store..author")
-    assertEquals(authors.map(_.asText()), List("Nigel Rees", "Evelyn Waugh", "Herman Melville", "J. R. R. Tolkien"))
+    assertEquals(authors.map(_.asText), List("Nigel Rees", "Evelyn Waugh", "Herman Melville", "J. R. R. Tolkien"))
   }
 
   test("extract all book titles"){
     val titles = storeJsValue.extract("$.store.book[*].title")
-    assertEquals(titles.map(_.asText()), List(
+    assertEquals(titles.map(_.asText), List(
       "Sayings of the Century",
       "Sword of Honour",
       "Moby Dick",
@@ -151,12 +151,12 @@ class JsValueExtractSuite extends munit.FunSuite {
 
   test("extract all books ISBNs"){
     val isbns = storeJsValue.extract("$.store.book[*].isbn")
-    assertEquals(isbns.map(_.asText()), List("0-553-21311-3", "0-395-19395-8"))
+    assertEquals(isbns.map(_.asText), List("0-553-21311-3", "0-395-19395-8"))
   }
 
   test("extract all books with ISBNs") {
     val books = storeJsValue.extract("$..book[?(@.isbn)]")
-    assertEquals(books.map(_.isbn.asText()), List("0-553-21311-3", "0-395-19395-8"))
+    assertEquals(books.map(_.isbn.asText), List("0-553-21311-3", "0-395-19395-8"))
   }
 
   test("All books in store cheaper than 10") {
@@ -196,7 +196,7 @@ class JsValueExtractSuite extends munit.FunSuite {
 
   test("The number of books") {
     val xs = storeJsValue.extract("$..book.length()")
-    assertEquals(xs.map(_.asInt()), List(4))
+    assertEquals(xs.map(_.asInt), List(4))
   }
 
 

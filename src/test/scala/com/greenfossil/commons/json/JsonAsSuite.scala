@@ -89,6 +89,7 @@ class JsonAsSuite extends munit.FunSuite {
     assertEquals((jsonObj \ "lastname").as[String], null)
     assertEquals((jsonObj \ "lastname").asNonNullOpt[String], None)
     assertEquals((jsonObj \ "displayname").asOpt[String], None) //Absence of field
+    /*To prevent jsValueToNumber conversion from JsNull error, age should be used with asNonNullOpt*/
     assertEquals((jsonObj \ "age").asOpt[Int], None)
 
     val jsonStr = """{"firstname":"Homer","lastname":null,"age":null}"""
@@ -98,6 +99,7 @@ class JsonAsSuite extends munit.FunSuite {
     assertEquals((parsedJson \ "firstname").as[String], "Homer")
     assertEquals((parsedJson \ "lastname").as[String], null)
     assertEquals((parsedJson \ "lastname").asNonNullOpt[String], None)
+    /*To prevent jsValueToNumber conversion from JsNull error, age should be used with asNonNullOpt*/
     assertEquals((parsedJson \ "age").asOpt[Int], None)
     assertEquals((parsedJson \ "displayname").asOpt[String], None) //Absence of field
   }
@@ -139,6 +141,20 @@ class JsonAsSuite extends munit.FunSuite {
     assertEquals(response.get[String]("address", "street").getOrElse(""), "Ang Mo Kio Ave 5")
     assertEquals(response.get[Long]("address", "blk").getOrElse(0L), 123L)
 
+  }
+
+  test("JsString to Seq[JsObject]") {
+    val jsObj = Json.obj("text" -> """[{"name":"Homer","age":55},{"name":"Marge","age":50}]""")
+    assertEquals(jsObj.text.as[String], """[{"name":"Homer","age":55},{"name":"Marge","age":50}]""")
+    assert(jsObj.text.isInstanceOf[JsString])
+    assertEquals(jsObj.text.as[Seq[JsObject]], jsObj.text.as[String].$$.as[Seq[JsObject]])
+  }
+
+  test("JsString to JsObject") {
+    val jsObj = Json.obj("text" -> """{"name":"Homer","age":55}""")
+    assertEquals(jsObj.text.as[String], """{"name":"Homer","age":55}""")
+    assert(jsObj.text.isInstanceOf[JsString])
+    assertEquals(jsObj.text.as[JsObject], jsObj.text.as[String].$$.as[JsObject])
   }
 
 }

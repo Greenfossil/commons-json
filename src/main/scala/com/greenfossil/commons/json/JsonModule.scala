@@ -126,6 +126,11 @@ private class JsValueSerializer extends JsonSerializer[JsValue]:
           serialize(t._2, json, provider)
         }
         json.writeEndObject()
+      case JsWildCard(value) =>
+        /// Serialize the wrapped JsValue as-is
+        logger.debug(s"JsWildCard $value")
+        serialize(value, json, provider)
+
       case JsUndefined(x) =>
         logger.debug(s"JsUndefined $x")
         //ignore
