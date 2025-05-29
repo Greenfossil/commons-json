@@ -13,13 +13,13 @@ class dotPathSuite extends munit.FunSuite {
       "children" -> Seq("Bart", "Maggie", "Lisa")
     ).as[JsValue]
 
-    assertEquals(jsValue.isActive.as[Boolean], true)
-    assertNoDiff(jsValue.name.as[String], "Homer")
-    assertNoDiff(jsValue.spouse.as[String], "Marge")
-    assertEquals(jsValue.children.as[Seq[JsValue]].size, 3)
-    assertNoDiff(jsValue.children(0).as[String], "Bart")
-    assertNoDiff(jsValue.children(1).as[String], "Maggie")
-    assertNoDiff(jsValue.children(2).as[String], "Lisa")
+    assertEquals(jsValue.isActive.asBoolean, true)
+    assertNoDiff(jsValue.name.asText, "Homer")
+    assertNoDiff(jsValue.spouse.asText, "Marge")
+    assertEquals(jsValue.children.asSeq[JsValue].size, 3)
+    assertNoDiff(jsValue.children(0).asText, "Bart")
+    assertNoDiff(jsValue.children(1).asText, "Maggie")
+    assertNoDiff(jsValue.children(2).asText, "Lisa")
     assertEquals[Any, Any](jsValue.addr.value, JsUndefined.missingNode("addr").value)
     assertNoDiff(jsValue.addr.street.stringify, "")
     assertEquals[Any, Any](jsValue.addr.street.value, JsUndefined.missingNode("addr").value)
@@ -34,14 +34,14 @@ class dotPathSuite extends munit.FunSuite {
       "children" -> Seq("Bart", "Maggie", "Lisa")
     ).as[JsValue]
 
-    assertNoDiff(jsValue.children(0).as[String], "Bart")
-    assertNoDiff(jsValue.children(0, 1).as[String], "Bart")
-    assertNoDiff(jsValue.children(0, 2).as[Seq[String]].mkString(","), "Bart,Maggie")
-    assertNoDiff(jsValue.children(1, 2).as[Seq[String]].mkString(","), "Maggie,Lisa")
-    assertNoDiff(jsValue.children(-1).as[String], "Lisa")
-    assertNoDiff(jsValue.children(-1, 1).as[String], "Lisa")
-    assertNoDiff(jsValue.children(-1, 2).as[Seq[String]].mkString(","), "Maggie,Lisa")
-    assertNoDiff(jsValue.children(-2, 2).as[Seq[String]].mkString(","), "Bart,Maggie")
+    assertNoDiff(jsValue.children(0).asText, "Bart")
+    assertNoDiff(jsValue.children(0, 1).asText, "Bart")
+    assertNoDiff(jsValue.children(0, 2).asSeq[String].mkString(","), "Bart,Maggie")
+    assertNoDiff(jsValue.children(1, 2).asSeq[String].mkString(","), "Maggie,Lisa")
+    assertNoDiff(jsValue.children(-1).asText, "Lisa")
+    assertNoDiff(jsValue.children(-1, 1).asText, "Lisa")
+    assertNoDiff(jsValue.children(-1, 2).asSeq[String].mkString(","), "Maggie,Lisa")
+    assertNoDiff(jsValue.children(-2, 2).asSeq[String].mkString(","), "Bart,Maggie")
   }
 
   test("existing JsNode attributes") {
@@ -64,14 +64,17 @@ class dotPathSuite extends munit.FunSuite {
         |}""".stripMargin
     val jsValue = Json.parse(string)
 
-    assertNoDiff(jsValue.identifier(0).system.as[String], "urn:ietf:rfc:3986")
-    assertNoDiff(jsValue.identifier(0).$value.as[String], "urn:oid:2.16.840.1.113883.4.642.29.1")
+    assertNoDiff(jsValue.identifier(0).system.asText, "urn:ietf:rfc:3986")
+    assertNoDiff(jsValue.identifier(0).$value.asText, "urn:oid:2.16.840.1.113883.4.642.29.1")
     val undefinedField = jsValue.identifier(0).use
+    assertEquals(undefinedField.isEmpty, true)
+    assertEquals(undefinedField.nonEmpty, false)
+    assertEquals(undefinedField.isDefined, false)
     undefinedField match
       case JsUndefined(value) => ()
-      case x => fail(s"Should be undefined, found [${x}] class: ${x.getClass.getName}")
+      case x => fail(s"Should be undefined, found [$x] class: ${x.getClass.getName}")
 
-    undefinedField.asOpt[String] match
+    undefinedField.asTextOpt match
       case Some(value) =>  fail(s"Should be None, found [$value]")
       case None => ()
 
@@ -82,7 +85,7 @@ class dotPathSuite extends munit.FunSuite {
     val s = """{"value" : "urn:oid:2.16.840.1.113883.4.642.29.1"}"""
     val jsValue = Json.parse(s)
     assertEquals(s.$$, jsValue)
-    assertEquals(s.$$.$value.as[String], "urn:oid:2.16.840.1.113883.4.642.29.1")
+    assertEquals(s.$$.$value.asText, "urn:oid:2.16.840.1.113883.4.642.29.1")
   }
 
   test("JsNull"){
@@ -94,24 +97,24 @@ class dotPathSuite extends munit.FunSuite {
     val obj: JsValue = Json.obj("value" -> 1, "null" -> null)
 
     //existing field
-    val valueOpt = obj.$value.toOption.map(_.asInt)
+    val valueOpt = obj.$value.asIntOpt
     assertEquals(valueOpt, Some(1))
 
     //existing field = null value
-    val nullOpt = obj.$null.toOption.map(_.asText)
+    val nullOpt = obj.$null.asTextOpt
     assertEquals(nullOpt, None)
 
     //missing field
-    val missingOpt = obj.missing.toOption.map(_.asText)
+    val missingOpt = obj.missing.asTextOpt
     assertEquals(missingOpt, None)
   }
 
   test("hyphenated name"){
     val obj1: JsValue = Json.obj("spoken_languages" -> List("English", "Mandarin"))
-    assertEquals(obj1.spoken_languages.as[Seq[String]], Seq("English", "Mandarin"))
+    assertEquals(obj1.spoken_languages.asSeq[String], Seq("English", "Mandarin"))
 
     val obj2: JsValue = Json.obj("spoken-languages" -> List("English", "Mandarin"))
-    assertEquals(obj2.`spoken-languages`.as[Seq[String]], Seq("English", "Mandarin"))
+    assertEquals(obj2.`spoken-languages`.asSeq[String], Seq("English", "Mandarin"))
   }
 
   test("handle edge_type_class as edge_type_class") {
@@ -120,10 +123,10 @@ class dotPathSuite extends munit.FunSuite {
         |  "edge_type_class" : "undirected",
         |  "adjList" : [ [ "A", [ "B" ] ], [ "B", [ "C" ] ], [ "C", [ "A" ] ] ]
         |}""".stripMargin
-    val jsValue = Json.parse(jsonString).as[JsValue]
+    val jsValue = Json.parse(jsonString)
 
-    assertNoDiff(jsValue.edge_type_class.as[String], "undirected")
-    assertEquals(jsValue.adjList.as[JsArray].size, 3)
+    assertNoDiff(jsValue.edge_type_class.asText, "undirected")
+    assertEquals(jsValue.adjList.asJsArray.size, 3)
   }
 
   test("handle edge-type-class as edge_type_class. Alternative to hypenated name") {
@@ -132,10 +135,10 @@ class dotPathSuite extends munit.FunSuite {
         |  "edge-type-class" : "undirected",
         |  "adjList" : [ [ "A", [ "B" ] ], [ "B", [ "C" ] ], [ "C", [ "A" ] ] ]
         |}""".stripMargin
-    val jsValue = Json.parse(jsonString).as[JsValue]
+    val jsValue = Json.parse(jsonString)
 
-    assertNoDiff(jsValue.edge_type_class.as[String], "undirected")
-    assertEquals(jsValue.adjList.as[JsArray].size, 3)
+    assertNoDiff(jsValue.edge_type_class.asText, "undirected")
+    assertEquals(jsValue.adjList.asJsArray.size, 3)
   }
 
   test("Fluent wild card .** ") {

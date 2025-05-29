@@ -52,3 +52,8 @@ ThisBuild / credentials += {
       Credentials("Sonatype Nexus Repository Manager", "central.sonatype.com", "", "")
     }
 }
+
+ThisBuild / resolvers ++= Seq(
+  //https://central.sonatype.org/publish/publish-portal-api/#manually-testing-a-deployment-bundle
+  "central.manual.testing" at "https://central.sonatype.com/api/v1/publisher/deployments/download"
+)

@@ -462,77 +462,83 @@ sealed trait JsValue extends Dynamic:
 
   inline def asText: String = as[String]
 
-  inline def asTextOrNull: String = asOpt[String].orNull
+  inline def asTextOrNull: String = asNonNullOpt[String].orNull
 
-  inline def asTextOrEmpty: String = asOpt[String].getOrElse("")
+  inline def asTextOrEmpty: String = asNonNullOpt[String].getOrElse("")
 
-  inline def asTextOrElse(default: String): String = asOpt[String].getOrElse(default)
+  inline def asTextOrElse(default: String): String = asNonNullOpt[String].getOrElse(default)
 
-  inline def asTextOpt: Option[String] = asOpt[String]
+  inline def asTextOpt: Option[String] = asNonNullOpt[String]
 
   inline def asBoolean: Boolean = as[Boolean]
 
-  inline def asBooleanOrFalse: Boolean = asOpt[Boolean].getOrElse(false)
+  inline def asBooleanOrFalse: Boolean = asNonNullOpt[Boolean].getOrElse(false)
 
-  inline def asBooleanOrTrue: Boolean = asOpt[Boolean].getOrElse(true)
+  inline def asBooleanOrTrue: Boolean = asNonNullOpt[Boolean].getOrElse(true)
 
-  inline def asBooleanOrElse(default: Boolean): Boolean = asOpt[Boolean].getOrElse(default)
+  inline def asBooleanOrElse(default: Boolean): Boolean = asNonNullOpt[Boolean].getOrElse(default)
 
-  inline def asBooleanOpt: Option[Boolean] = asOpt[Boolean]
+  inline def asBooleanOpt: Option[Boolean] = asNonNullOpt[Boolean]
 
   inline def asInt: Int = as[Int]
 
-  inline def asIntOrElse(default: Int): Int = asOpt[Int].getOrElse(default)
+  inline def asIntOrElse(default: Int): Int = asNonNullOpt[Int].getOrElse(default)
 
-  inline def asIntOpt: Option[Int] = asOpt[Int]
+  inline def asIntOpt: Option[Int] = asNonNullOpt[Int]
 
   inline def asLong: Long = as[Long]
 
-  inline def asLongOrElse(default: Long): Long = asOpt[Long].getOrElse(default)
+  inline def asLongOrElse(default: Long): Long = asNonNullOpt[Long].getOrElse(default)
 
-  inline def asLongOpt: Option[Long] = asOpt[Long]
+  inline def asLongOpt: Option[Long] = asNonNullOpt[Long]
 
   inline def asFloat: Float = as[Float]
 
-  inline def asFloatOrElse(default: Float): Float = asOpt[Float].getOrElse(default)
+  inline def asFloatOrElse(default: Float): Float = asNonNullOpt[Float].getOrElse(default)
 
-  inline def asFloatOpt: Option[Float] = asOpt[Float]
+  inline def asFloatOpt: Option[Float] = asNonNullOpt[Float]
 
   inline def asDouble: Double = as[Double]
 
-  inline def asDoubleOrElse(default: Double): Double = asOpt[Double].getOrElse(default)
+  inline def asDoubleOrElse(default: Double): Double = asNonNullOpt[Double].getOrElse(default)
 
-  inline def asDoubleOpt: Option[Double] = asOpt[Double]
+  inline def asDoubleOpt: Option[Double] = asNonNullOpt[Double]
 
   inline def asBigDecimal: BigDecimal = as[BigDecimal]
 
-  inline def asBigDecimalOrElse(default: BigDecimal): BigDecimal = asOpt[BigDecimal].getOrElse(default)
+  inline def asBigDecimalOrElse(default: BigDecimal): BigDecimal = asNonNullOpt[BigDecimal].getOrElse(default)
 
-  inline def asBigDecimalOpt: Option[BigDecimal] = asOpt[BigDecimal]
+  inline def asBigDecimalOpt: Option[BigDecimal] = asNonNullOpt[BigDecimal]
 
   inline def asSeq[T]: Seq[T] = as[Seq[T]]
 
-  inline def asSeqOrEmpty[T]: Seq[T] = asOpt[Seq[T]].getOrElse(Seq.empty)
+  inline def asSeqOrEmpty[T]: Seq[T] = asNonNullOpt[Seq[T]].getOrElse(Seq.empty)
 
-  inline def asSeqOrElse[T](default: Seq[T]): Seq[T] = asOpt[Seq[T]].getOrElse(default)
+  inline def asSeqOrElse[T](default: Seq[T]): Seq[T] = asNonNullOpt[Seq[T]].getOrElse(default)
   
-  inline def asSeqOpt[T]: Option[Seq[T]] = asOpt[Seq[T]]
+  inline def asSeqOpt[T]: Option[Seq[T]] = asNonNullOpt[Seq[T]]
 
   inline def asJsObject: JsObject = as[JsObject]
 
-  inline def asJsObjectOrEmpty: JsObject = asOpt[JsObject].getOrElse(JsObject.empty)
+  inline def asJsObjectOrEmpty: JsObject = asNonNullOpt[JsObject].getOrElse(JsObject.empty)
 
-  inline def asJsObjectOrElse(default: JsObject): JsObject = asOpt[JsObject].getOrElse(default)
+  inline def asJsObjectOrElse(default: JsObject): JsObject = asNonNullOpt[JsObject].getOrElse(default)
 
-  inline def asJsObjectOpt: Option[JsObject] = asOpt[JsObject]
+  inline def asJsObjectOpt: Option[JsObject] = asNonNullOpt[JsObject]
 
   inline def asJsArray: JsArray = as[JsArray]
 
-  inline def asJsArrayOrEmpty: JsArray = asOpt[JsArray].getOrElse(JsArray.empty)
+  inline def asJsArrayOrEmpty: JsArray = asNonNullOpt[JsArray].getOrElse(JsArray.empty)
 
-  inline def asJsArrayOrElse(default: JsArray): JsArray = asOpt[JsArray].getOrElse(default)
+  inline def asJsArrayOrElse(default: JsArray): JsArray = asNonNullOpt[JsArray].getOrElse(default)
 
-  inline def asJsArrayOpt: Option[JsArray] = asOpt[JsArray]
+  inline def asJsArrayOpt: Option[JsArray] = asNonNullOpt[JsArray]
+
+  def isDefined: Boolean =  asNonNullOpt.isDefined
+
+  def isEmpty: Boolean = asNonNullOpt.isEmpty
+
+  def nonEmpty: Boolean = asNonNullOpt.nonEmpty
 
 
   /**
@@ -840,7 +846,7 @@ case object JsNull extends JsValue:
 import scala.collection.immutable
 
 object JsObject:
-  val empty: JsObject = JsObject(immutable.ListMap.empty)
+  val empty: JsObject = JsObject(Nil)
 
   def apply(fields: Seq[(String, JsValue | String | Boolean | Number | Temporal | Null)]): JsObject =
     val jsFields = fields.map((name, v) => name -> primitiveToJsValue(v))
@@ -849,7 +855,13 @@ object JsObject:
 
 case class JsObject(value: immutable.ListMap[String, JsValue]) extends JsValue:
   type A = immutable.ListMap[String, JsValue]
-  export value.{ apply as _, - as _ , keys as _,  *}
+  export value.{ apply as _, - as _ , keys as _,  isEmpty => _, nonEmpty => _,  *}
+
+  override def isEmpty: Boolean = value.isEmpty
+
+  override def nonEmpty: Boolean = value.nonEmpty
+
+  override def isDefined: Boolean = nonEmpty
 
   def fields: Seq[(String, JsValue)] = value.toList
 
@@ -917,7 +929,14 @@ object JsArray:
 
 case class JsArray(value: Seq[JsValue]) extends JsValue:
   type A = Seq[JsValue]
-  export value.{head, headOption, isEmpty, nonEmpty, collect, map, filter, exists, foldLeft, tail, take, flatMap, size}
+  export value.{head, headOption, isEmpty => _, nonEmpty => _, collect, map, filter, exists, foldLeft, tail, take, flatMap, size}
+
+  override def isEmpty: Boolean = value.isEmpty
+
+  override def nonEmpty: Boolean = value.nonEmpty
+
+  override def isDefined: Boolean = nonEmpty
+
 
   def ++(otherJsArray: JsArray): JsArray =
     JsArray(value ++ otherJsArray.value)

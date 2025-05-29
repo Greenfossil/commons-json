@@ -86,4 +86,18 @@ class OptionalJsObjectJsArraySuite extends munit.FunSuite {
     assertNoDiff(jsObj1.stringify, jsObj2.stringify)
   }
 
+  test("JsObject isEmpty, isDefined, nonEmpty") {
+    assertEquals(JsObject.empty, Json.parse("{}"))
+    assertEquals(JsObject.empty.isEmpty, true)
+    assertEquals(JsObject.empty.nonEmpty, false)
+    assertEquals(JsObject.empty.isDefined, false)
+  }
+
+  test("JsArray isEmpty, isDefined, nonEmpty") {
+    assertEquals(JsArray.empty, Json.parse("[]"))
+    assertEquals(JsArray.empty.isEmpty, true)
+    assertEquals(JsArray.empty.nonEmpty, false)
+    assertEquals(JsArray.empty.isDefined, false)
+  }
+
 }
