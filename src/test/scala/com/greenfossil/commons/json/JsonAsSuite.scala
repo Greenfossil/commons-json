@@ -145,16 +145,27 @@ class JsonAsSuite extends munit.FunSuite {
 
   test("JsString to Seq[JsObject]") {
     val jsObj = Json.obj("text" -> """[{"name":"Homer","age":55},{"name":"Marge","age":50}]""")
-    assertEquals(jsObj.text.as[String], """[{"name":"Homer","age":55},{"name":"Marge","age":50}]""")
+    assertEquals(jsObj.text.asText, """[{"name":"Homer","age":55},{"name":"Marge","age":50}]""")
     assert(jsObj.text.isInstanceOf[JsString])
-    assertEquals(jsObj.text.as[Seq[JsObject]], jsObj.text.as[String].$$.as[Seq[JsObject]])
+    assertEquals(jsObj.text.asSeq[JsObject], jsObj.text.asText.$$.asSeq[JsObject])
+
+    assertEquals(Json.obj("text" -> "").text.asSeqOrEmpty[JsObject], Nil)
+    assertEquals(Json.obj("text" -> null).text.asSeqOrEmpty[Int], Nil)
+    assertEquals(Json.obj("text" -> "[1]").text.asSeqOrEmpty[Int], Seq(1))
+    assertEquals(Json.obj("text" -> Seq(Json.obj("a" -> "apple"))).text.asSeqOrEmpty[JsObject], Seq(Json.obj("a" -> "apple")))
+    assertEquals(Json.obj("text" -> Seq(Json.obj("a" -> "apple"))).text.asSeqOrEmpty[JsValue], Seq(Json.obj("a" -> "apple")))
   }
 
   test("JsString to JsObject") {
     val jsObj = Json.obj("text" -> """{"name":"Homer","age":55}""")
-    assertEquals(jsObj.text.as[String], """{"name":"Homer","age":55}""")
+    assertEquals(jsObj.text.asText, """{"name":"Homer","age":55}""")
     assert(jsObj.text.isInstanceOf[JsString])
-    assertEquals(jsObj.text.as[JsObject], jsObj.text.as[String].$$.as[JsObject])
+    assertEquals(jsObj.text.asJsObject, jsObj.text.asText.$$.as[JsObject])
+    assertEquals(Json.obj("text" -> "").text.asJsObjectOrEmpty, JsObject.empty)
+    assertEquals(Json.obj("text" -> null).text.asJsObjectOrEmpty, JsObject.empty)
+    assertEquals(Json.obj("text" -> Json.obj("pen" -> 1)).text.asJsObjectOrEmpty, Json.obj("pen" -> 1))
+    assertEquals(Json.obj("text" -> Json.obj("pen" -> "[1]")).text.asJsObjectOrEmpty, Json.obj("pen" -> "[1]"))
+    assertEquals(Json.obj("text" -> Json.obj("pen" -> Seq("1"))).text.asJsObjectOrEmpty, Json.obj("pen" -> Seq("1")))
   }
 
 }
