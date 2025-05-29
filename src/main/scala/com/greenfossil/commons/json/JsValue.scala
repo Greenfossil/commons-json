@@ -534,6 +534,49 @@ sealed trait JsValue extends Dynamic:
 
   inline def asJsArrayOpt: Option[JsArray] = asNonNullOpt[JsArray]
 
+  inline def asLocalTime: LocalTime = as[LocalTime]
+
+  inline def asLocalTimeOpt: Option[LocalTime] = asNonNullOpt[LocalTime]
+
+  inline def asLocalTimeOrNull: LocalTime = asNonNullOpt[LocalTime].orNull
+
+  inline def asLocalDate: LocalDate = as[LocalDate]
+
+  inline def asLocalDateOpt: Option[LocalDate] = asNonNullOpt[LocalDate]
+
+  inline def asLocalDateOrNull: LocalDate = asNonNullOpt[LocalDate].orNull
+
+  inline def asLocalDateTime: LocalDateTime = as[LocalDateTime]
+
+  inline def asLocalDateTimeOpt: Option[LocalDateTime] = asNonNullOpt[LocalDateTime]
+
+  inline def asLocalDateTimeOrNull: LocalDateTime = asNonNullOpt[LocalDateTime].orNull
+
+  inline def asInstant: Instant = as[Instant]
+
+  inline def asInstantOpt: Option[Instant] = asNonNullOpt[Instant]
+
+  inline def asInstantOrNull: Instant = asNonNullOpt[Instant].orNull
+
+  inline def asOffsetDateTime: OffsetDateTime = as[OffsetDateTime]
+
+  inline def asOffsetDateTimeOpt: Option[OffsetDateTime] = asNonNullOpt[OffsetDateTime]
+
+  inline def asOffsetDateTimeOrNull: OffsetDateTime = asNonNullOpt[OffsetDateTime].orNull
+
+  inline def asOffsetTime: OffsetTime = as[OffsetTime]
+
+  inline def asOffsetTimeOpt: Option[OffsetTime] = asNonNullOpt[OffsetTime]
+
+  inline def asOffsetTimeOrNull: OffsetTime = asNonNullOpt[OffsetTime].orNull
+
+  inline def asZonedDateTime: ZonedDateTime = as[ZonedDateTime]
+
+  inline def asZonedDateTimeOpt: Option[ZonedDateTime] = asNonNullOpt[ZonedDateTime]
+
+  inline def asZonedDateTimeOrNull: ZonedDateTime = asNonNullOpt[ZonedDateTime].orNull
+
+
   def isDefined: Boolean =  asNonNullOpt.isDefined
 
   def isEmpty: Boolean = asNonNullOpt.isEmpty
