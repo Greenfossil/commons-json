@@ -164,7 +164,7 @@ inline private def valueType[T]: String =
 
 object JsValue:
 
-  given Conversion[String | Boolean | Number | Temporal | Null, JsValue] =
+  given Conversion[JSTYPE | Null, JsValue] =
     toJsValue(_)
 
   given Conversion[Seq[?], JsArray] with
@@ -196,7 +196,7 @@ object JsValue:
     import scala.jdk.CollectionConverters.*
     x.asInstanceOf[Matchable] match
       case null => null
-      case x: (String | Boolean | Number | Temporal | JsValue) => primitiveToJsValue(x)
+      case x: (JSTYPE | JsValue) => primitiveToJsValue(x)
       case xs: Array[?] => JsArray(xs.toIndexedSeq.map(toJsValue(_, tupleSerializer)))
       case obj: Map[?, ?] => JsObject(obj.toList.map(tup2 => tup2._1.toString -> toJsValue(tup2._2, tupleSerializer)))
       case it: Iterable[?] => JsArray(it.map(toJsValue(_, tupleSerializer)).toList)
@@ -250,7 +250,7 @@ sealed trait JsValue extends Dynamic:
     jsValue match
       case JsString(value) =>  value
       case JsNumber(value) => value.toString
-      case JsTemporal(value, format, zoneId) => value.toString
+      case JsTemporal(value, format, zoneId) => value.toString //FIXME - seems to be a bug here
       case JsBoolean(value) => value.toString
       case JsNull => null
       case JsObject(value) => jsValue.stringify
@@ -576,7 +576,6 @@ sealed trait JsValue extends Dynamic:
 
   inline def asZonedDateTimeOrNull: ZonedDateTime = asNonNullOpt[ZonedDateTime].orNull
 
-
   def isDefined: Boolean =  asNonNullOpt.isDefined
 
   def isEmpty: Boolean = asNonNullOpt.isEmpty
@@ -624,15 +623,13 @@ sealed trait JsValue extends Dynamic:
           case JsNull => Option.empty[T]
           case _ => Try(this.as[T]).toOption
         }
-
     }
 
   def toOption: Option[JsValue] =
-    this match {
+    this match
       case JsNull => None
       case JsUndefined(_) => None
       case _ => Option(this)
-    }
 
   import com.fasterxml.jackson.databind.JsonNode
 
@@ -663,15 +660,14 @@ sealed trait JsValue extends Dynamic:
     require(count > 0, "count must be positive integer")
     if !this.isInstanceOf[JsArray] then JsUndefined("Node must be an JsArray")
     else
-      val length = _jsonNode.size()
-      val actualStart = if (start >= 0) start else
-        length + start - (if count == 1 then 0 else 1)
-      val actualEnd = (actualStart + count).min(length)
-      val xs = (actualStart until actualEnd).map{ index =>
-        jsonNodeToJsValue(_jsonNode.get(index), classOf[JsValue])
-      }
+      import scala.jdk.CollectionConverters.*
+      val _nodes = _jsonNode.elements().asScala.toList
+      val xs = {
+        if start >= 0 then _nodes.slice(start, start + count)
+        else _nodes.dropRight(start.abs - 1).takeRight(count)
+      }.map(n => jsonNodeToJsValue(n, classOf[JsValue]))
       if xs.nonEmpty && count == 1 then xs.head
-      else JsArray( if start >=  0 then xs else xs )
+      else JsArray(if start >= 0 then xs else xs)
 
 
   /**
@@ -742,6 +738,14 @@ sealed trait JsValue extends Dynamic:
           }
     }
 
+  /**
+   * Allow dynamic access to JsValue using the name of the array field,
+   * the first argument is the index and the second argument return number of elements.
+   * index is zero based, if it is negative, it will be counted from the end of the array.
+   * @param name
+   * @param args
+   * @return
+   */
   def applyDynamic(name: String)(args: Int*): JsValue =
     args match
       case ArraySeq(index: Int) => selectDynamic(name)._get(index)
@@ -891,7 +895,7 @@ import scala.collection.immutable
 object JsObject:
   val empty: JsObject = JsObject(Nil)
 
-  def apply(fields: Seq[(String, JsValue | String | Boolean | Number | Temporal | Null)]): JsObject =
+  def apply(fields: Seq[(String, JsValue | JSTYPE | Null)]): JsObject =
     val jsFields = fields.map((name, v) => name -> primitiveToJsValue(v))
     new JsObject(immutable.ListMap(jsFields *))
 
@@ -922,8 +926,11 @@ case class JsObject(value: immutable.ListMap[String, JsValue]) extends JsValue:
   def ++ (otherObj: JsObject): JsObject =
     JsObject(value ++ otherObj.value)
 
-  def + (key:String, jsValue: JsValue): JsObject =
-    JsObject(this.fields :+ key ->jsValue)
+  def + (key:String, value: JsValue | JSTYPE | Null): JsObject =
+    JsObject(this.fields :+ key -> value)
+
+  def + (field : (String, JsValue | JSTYPE | Null)): JsObject =
+    JsObject(this.fields :+ field)
 
   def - (key: String) : JsObject =
     JsObject(value.filterNot(entry => entry._1 == key))

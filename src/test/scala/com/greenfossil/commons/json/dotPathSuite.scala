@@ -36,12 +36,13 @@ class dotPathSuite extends munit.FunSuite {
 
     assertNoDiff(jsValue.children(0).asText, "Bart")
     assertNoDiff(jsValue.children(0, 1).asText, "Bart")
-    assertNoDiff(jsValue.children(0, 2).asSeq[String].mkString(","), "Bart,Maggie")
+    assertNoDiff(jsValue.children(0, 3).asSeq[String].mkString(","), "Bart,Maggie,Lisa")
     assertNoDiff(jsValue.children(1, 2).asSeq[String].mkString(","), "Maggie,Lisa")
     assertNoDiff(jsValue.children(-1).asText, "Lisa")
     assertNoDiff(jsValue.children(-1, 1).asText, "Lisa")
-    assertNoDiff(jsValue.children(-1, 2).asSeq[String].mkString(","), "Maggie,Lisa")
+    assertNoDiff(jsValue.children(-1, 3).asSeq[String].mkString(","), "Bart,Maggie,Lisa")
     assertNoDiff(jsValue.children(-2, 2).asSeq[String].mkString(","), "Bart,Maggie")
+    assertNoDiff(jsValue.children(-3, 1).asSeq[String].mkString(","), "Bart")
   }
 
   test("existing JsNode attributes") {
