@@ -902,7 +902,9 @@ object JsObject:
 
 case class JsObject(value: immutable.ListMap[String, JsValue]) extends JsValue:
   type A = immutable.ListMap[String, JsValue]
-  export value.{ apply as _, - as _ , keys as _,  isEmpty => _, nonEmpty => _,  *}
+  export value.{ apply as _, - as _ , keys as _,  isEmpty => _, nonEmpty => _, empty => _ , *}
+
+  def empty: JsObject = JsObject.empty
 
   override def isEmpty: Boolean = value.isEmpty
 
