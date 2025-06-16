@@ -1,3 +1,4 @@
+//See link for publishSigned, sonaUpdate, sonaRelease details
 ThisBuild / organizationName := "Greenfossil Pte Ltd"
 ThisBuild / organizationHomepage := Some(url("https://greenfossil.com/"))
 
