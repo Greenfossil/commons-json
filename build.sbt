@@ -2,9 +2,9 @@ name := "commons-json"
 
 organization := "com.greenfossil"
 
-version := "1.3.0-RC2"
+version := "1.3.0"
 
-scalaVersion := "3.7.0"
+scalaVersion := "3.7.1"
 
 scalacOptions ++= Seq("-feature", "-deprecation", "-Wunused:imports")
 
@@ -18,7 +18,7 @@ libraryDependencies ++= Seq(
   "com.jayway.jsonpath" % "json-path" % "2.9.0",
   "org.slf4j" % "slf4j-api" % "2.0.16",
   "ch.qos.logback" % "logback-classic" % "1.5.16" % Test,
-  "org.scalameta" %% "munit" % "1.1.0" % Test
+  "org.scalameta" %% "munit" % "1.1.1" % Test
 )
 
 lazy val commonsJson = project.in(file("."))

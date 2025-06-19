@@ -215,22 +215,23 @@ sealed trait JsValue extends Dynamic:
 
   def value: A
 
-  private def jsValueToTemporal(jsValue: JsValue, toType: String): Temporal =
+  private def jsValueToTemporal(jsValue: JsValue, tpe: String): Temporal =
     jsValue match
-      case x: JsNumber => x.value.toTemporal(toType)
-      case x: JsString => x.value.toTemporal(toType)
-      case x: JsTemporal if toType == "Any" => x.value
+      case x: JsNumber => x.value.toTemporal(tpe)
+      case x: JsString => x.value.toTemporal(tpe)
+      case x: JsTemporal if tpe == "Any" => x.value
       case x: JsTemporal =>
         x.value match
-          case t: Instant => t.toTemporal(toType)
-          case t: LocalDateTime => t.toTemporal(toType)
-          case t: LocalDate => t.toTemporal(toType)
-          case t: LocalTime => t.toTemporal(toType)
-          case t: OffsetTime => t.toTemporal(toType)
-          case t: OffsetDateTime => t.toTemporal(toType)
-          case t: ZonedDateTime => t.toTemporal(toType)
-          case t: java.util.Date => t.toTemporal(toType)
+          case t: Instant => t.toTemporal(tpe)
+          case t: LocalDateTime => t.toTemporal(tpe)
+          case t: LocalDate => t.toTemporal(tpe)
+          case t: LocalTime => t.toTemporal(tpe)
+          case t: OffsetTime => t.toTemporal(tpe)
+          case t: OffsetDateTime => t.toTemporal(tpe)
+          case t: ZonedDateTime => t.toTemporal(tpe)
+          case t: java.util.Date => t.toTemporal(tpe)
       case JsNull => null
+      case JsWildCard(value) => jsValueToTemporal(value, tpe)
       case unsupported =>
        logWarnAndThrow(s"jsValueToTemporal conversion for unsupported error: [$unsupported] type:${unsupported.getClass.getName}.")
 
@@ -245,6 +246,7 @@ sealed trait JsValue extends Dynamic:
       case JsObject(value) => value.isEmpty
       case JsArray(value) => value.isEmpty
       case JsUndefined(value) => logWarnAndThrow(s"jsValueToBoolean conversion from JsUndefined error: [$value].")
+      case JsWildCard(value) => jsValueToBoolean(value,tpe)
 
   private def jsValueToString(jsValue: JsValue, tpe: String): String =
     jsValue match
@@ -257,6 +259,7 @@ sealed trait JsValue extends Dynamic:
       case JsArray(value) => jsValue.stringify
       case JsUndefined(value) =>
         logWarnAndThrow(s"jsValueToString conversion from JsUndefined error: [$value].")
+      case JsWildCard(value) => jsValueToString(value, tpe)
 
   private def jsValueToNumber(jsValue: JsValue, tpe: String): Number =
     jsValue match
@@ -278,7 +281,7 @@ sealed trait JsValue extends Dynamic:
       case JsNull => logWarnAndThrow(s"jsValueToNumber conversion from JsNull error.")
       case JsUndefined(value) =>
         logWarnAndThrow(s"jsValueToNumber conversion from JsUndefined error: [$value].")
-
+      case JsWildCard(value) => jsValueToNumber(value, tpe)
       case unsupported =>
         logWarnAndThrow(s"jsValueToNumber conversion from unsupported type error: [$unsupported] type:${unsupported.getClass.getName}.")
 
@@ -300,10 +303,12 @@ sealed trait JsValue extends Dynamic:
             case v: JsObject => Option(key -> jsValueToObject(v, tpe))
             case v: JsArray => Option(key -> jsValueToArray(v, tpe))
             case v: JsUndefined => None
+            case JsWildCard(value) => Option(key ->  jsValueToAny(value, tpe))
         }
         fields
       case JsArray(value) => value.map(v => asValue(v, tpe))
       case JsUndefined(value) => logWarnAndThrow(s"jsValueToArray conversion from JsUndefined error: [$value].")
+      case JsWildCard(value) => jsValueToArray(value, tpe)
 
   private def jsValueToObject(jsValue: JsValue, tpe: String): Map[String, Any] =
     jsValue match
@@ -323,6 +328,7 @@ sealed trait JsValue extends Dynamic:
             case v: JsObject => Option(key -> jsValueToObject(v, tpe))
             case v: JsArray => Option(key -> jsValueToArray(v, tpe))
             case v: JsUndefined => None
+            case JsWildCard(value) => Option(key -> jsValueToAny(value, tpe))
         }
         fields.toMap
 
@@ -338,13 +344,17 @@ sealed trait JsValue extends Dynamic:
             case v: JsObject => Option(key -> jsValueToObject(v, tpe))
             case v: JsArray => Option(key -> jsValueToArray(v, tpe))
             case v: JsUndefined => None
+            case JsWildCard(value) =>Option(key -> jsValueToAny(value, tpe))
+
         }
         fields.toMap
 
       case JsUndefined(value) => logWarnAndThrow(s"jsValueToObject conversion to JsUndefined error: [$value].")
 
-  private def jsValueToAny(x: JsValue, tpe: String): Any =
-    x match
+      case JsWildCard(value) => jsValueToObject(value, tpe)
+
+  private def jsValueToAny(any: JsValue, tpe: String): Any =
+    any match
       case value: JsString =>  value.value
       case value: JsNumber => value.value
       case value: JsTemporal => value.value
@@ -353,14 +363,16 @@ sealed trait JsValue extends Dynamic:
       case value: JsObject => jsValueToObject(value, "Any")
       case value: JsArray => jsValueToArray(value, "Any")
       case JsUndefined(value)=> logWarnAndThrow(s"jsValueToAny conversion from JsUndefined error: [$value].")
+      case JsWildCard(value) => jsValueToAny(value, tpe)
 
-  private def jsValueToJsTemporal(jsValue: JsValue, tpe: String) =
+  private def jsValueToJsTemporal(jsValue: JsValue, tpe: String): JsValue =
     jsValue match
       case JsString(s) => JsTemporal(s.toTemporal("Instant"))
       case JsNumber(bd) => JsTemporal(longToInstant(bd.precision, bd.longValue))
       case value : JsTemporal => value
       case JsNull => JsNull
       case JsUndefined(value) => logWarnAndThrow(s"jsValueToJsTemporal conversion to JsUndefined error: [$value].")
+      case JsWildCard(value) => jsValueToJsTemporal(value, tpe)
       case unsupported => logWarnAndThrow(s"jsValueToJsTemporal conversion to unsupported type error: [$unsupported] type:${unsupported.getClass.getName}.")
 
   private def jsValueToJsString(jsValue: JsValue, tpe: String): JsString =
@@ -373,6 +385,7 @@ sealed trait JsValue extends Dynamic:
       case JsObject(value) => JsString(value.toString())
       case JsArray(value) => JsString(value.toString())
       case JsUndefined(value) => logWarnAndThrow(s"jsValueToJsString conversion to JsUndefined error: [$value].")
+      case JsWildCard(value) => jsValueToJsString(value, tpe)
 
   private def jsValueToJsBoolean(jsValue: JsValue, tpe: String): JsBoolean =
     jsValue match
@@ -384,6 +397,7 @@ sealed trait JsValue extends Dynamic:
       case JsObject(value) => JsBoolean(value.isEmpty)
       case JsArray(value) => JsBoolean(value.isEmpty)
       case JsUndefined(value) => logWarnAndThrow(s"jsValueToJsBoolean conversion to JsUndefined value [$value].")
+      case JsWildCard(value) => jsValueToJsBoolean(value, tpe)
 
   private def jsValueToJsNumber(jsValue: JsValue, tpe: String): JsNumber =
     jsValue match
@@ -392,12 +406,14 @@ sealed trait JsValue extends Dynamic:
       case JsBoolean(value) => JsNumber( if value then 1 else 0)
       case JsNull => JsNumber(null)
       case JsUndefined(value) => logWarnAndThrow(s"jsValueToJsNumber conversion to JsUndefined error: [$value].")
+      case JsWildCard(value) => jsValueToJsNumber(value, tpe)
       case unsupported => logWarnAndThrow(s"jsValueToJsNumber conversion to unsupported type error: [$unsupported] type:${unsupported.getClass.getName}.")
 
   private def jsValueToJsObject(jsValue: JsValue, tpe: String): JsObject =
     jsValue match
       case value: JsObject => value
       case JsUndefined(value) => logWarnAndThrow(s"jsValueToJsObject conversion to JsUndefined error: [$value].")
+      case JsWildCard(value) => jsValueToJsObject(value, tpe)
       case unsupported => logWarnAndThrow(s"jsValueToJsObject conversion to unsupported type error: [$unsupported] type:${unsupported.getClass.getName}.")
 
   private def jsValueToJsArray(x: JsValue, tpe: String): JsArray =
@@ -410,6 +426,7 @@ sealed trait JsValue extends Dynamic:
       case value: JsArray => value
       case JsUndefined(value) =>
         logWarnAndThrow(s"jsValueToJsArray conversion to JsUndefined error: [$value].")
+      case JsWildCard(value) => jsValueToJsArray(value, tpe)
       case unsupported =>
         logWarnAndThrow(s"jsValueToJsArray conversion to unsupported error: [$unsupported] type:${unsupported.getClass.getName}.")
 
@@ -785,6 +802,10 @@ sealed trait JsValue extends Dynamic:
   
   def prettyPrint: String = Json.prettyPrint(this)
 
+  transparent inline def showPretty(label:String): JsValue =
+    val s = s"\n--------------\nJson Start:${label}\n--------------\n${this.prettyPrint}\n------------\nJson End\n------------\n"
+    show(Console.out, s)
+
   transparent inline def showPretty: JsValue =
     val s = s"\n--------------\nJson Start\n--------------\n${this.prettyPrint}\n------------\nJson End\n------------\n"
     show(Console.out, s)
@@ -981,7 +1002,7 @@ object JsArray:
 
 case class JsArray(value: Seq[JsValue]) extends JsValue:
   type A = Seq[JsValue]
-  export value.{head, headOption, isEmpty => _, nonEmpty => _, collect, map, filter, exists, foldLeft, tail, take, flatMap, size}
+  export value.{head, headOption, isEmpty => _, nonEmpty => _, collect, map, filter, filterNot, exists, foldLeft, tail, take, flatMap, size}
 
   override def isEmpty: Boolean = value.isEmpty
 
@@ -989,6 +1010,9 @@ case class JsArray(value: Seq[JsValue]) extends JsValue:
 
   override def isDefined: Boolean = nonEmpty
 
+  def :+ (elem: JsValue): JsArray = JsArray(value :+ elem)
+
+  def +: (elem: JsValue): JsArray = JsArray(elem +: value)
 
   def ++(otherJsArray: JsArray): JsArray =
     JsArray(value ++ otherJsArray.value)
