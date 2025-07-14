@@ -17,9 +17,9 @@
 package com.greenfossil.commons.json
 
 import com.fasterxml.jackson.databind.node.MissingNode
-import com.jayway.jsonpath.{Configuration, JsonPath}
 import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider
 import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider
+import com.jayway.jsonpath.{Configuration, JsonPath}
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.ArraySeq
@@ -730,30 +730,41 @@ sealed trait JsValue extends Dynamic:
    * @param name
    * @return
    */
-  def selectDynamic(name: String): JsValue =
-    if this.isInstanceOf[JsUndefined] then this
-    else{
+  def selectDynamic(name: String): JsValue = {
+    if this.isInstanceOf[JsUndefined] then
+      this
+    else
       /*
        * Remove the escaped $ sign from the name if exists.
        * Find name using _name, if fails then try to find name with '-' instead of '_' else fail search
        * If node is found, then check if it is a WildCard, if so then traverse the node and return all values
        * else return the node as JsValue
        */
-      val _name = name.replaceFirst("^\\$", "")
-      _jsonNode.at(s"/$_name") match
-        case _: MissingNode =>
-          /*
-           * if name contains '_' then try to find a name with '-' else fail search
-           */
-          if name.contains("_") then selectDynamic(name.replaceAll("_", "-"))
-          else JsUndefined.missingNode(name)
-        case node =>
-          this match {
-            case wc: JsWildCard =>
-              JsArray(_nodeTraverse(_name, wc._jsonNode, List(), _ => true))
-            case _ => jsonNodeToJsValue(node, classOf[JsValue])
-          }
+      val normalizedName = name.replaceFirst("^\\$", "")
+
+      this match
+        case wc: JsWildCard =>
+          handleWildCardSelection(normalizedName, wc)
+        case _ =>
+          findNodeByName(normalizedName)
+  }
+
+  private def handleWildCardSelection(name: String, wildCard: JsWildCard): JsValue =
+    _nodeTraverse(name, wildCard._jsonNode, List(), _ => true) match {
+      case Nil => JsUndefined.missingNode(name)
+      case seq => JsArray(seq)
     }
+
+  private def findNodeByName(name: String): JsValue =
+    _jsonNode.at(s"/$name") match
+      case _: MissingNode =>
+        if name.contains("_") then
+          // Try with hyphens instead of underscores
+          findNodeByName(name.replaceAll("_", "-"))
+        else
+          JsUndefined.missingNode(name)
+      case node =>
+        jsonNodeToJsValue(node, classOf[JsValue])
 
   /**
    * Allow dynamic access to JsValue using the name of the array field,
@@ -1019,6 +1030,7 @@ case class JsArray(value: Seq[JsValue]) extends JsValue:
 
 case class JsWildCard(value: JsValue) extends JsValue :
   type A = JsValue
+
 end JsWildCard
 
 object JsUndefined:

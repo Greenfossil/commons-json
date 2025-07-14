@@ -40,7 +40,7 @@ class JsonWildcardSuite extends munit.FunSuite {
     val wild = js.**
     assertEquals(wild.user, JsArray(js.user))
     assertEquals(wild.admin, JsArray(js.admin))
-    assert(wild.name.isInstanceOf[JsUndefined]) // No direct "name" field at top level
+    assertEquals(wild.name, JsArray(JsString("John"), JsString("Admin")))
   }
 
   test("JsWildCard with arrays") {
@@ -59,7 +59,7 @@ class JsonWildcardSuite extends munit.FunSuite {
     val wild = js.**
     val usersField = wild.users.asInstanceOf[JsArray].value(0)
     assertEquals(usersField, js.users)
-    assert(wild.name.isInstanceOf[JsUndefined])
+    assertEquals(wild.name, JsArray(JsString("John"), JsString("Jane")))
   }
 
   test("Field access with deeply nested structures") {
@@ -79,7 +79,7 @@ class JsonWildcardSuite extends munit.FunSuite {
     // Test wildcard at top level
     val wild = js.**
     assertEquals(wild.dept, JsArray(js.dept))
-    assert(wild.id.isInstanceOf[JsUndefined]) // No direct "id" field at top level
+    assertEquals(wild.id, JsArray(JsNumber(123)))
   }
 
   test("Multiple fields at different levels") {
@@ -154,7 +154,7 @@ class JsonWildcardSuite extends munit.FunSuite {
     // Test wildcard with null
     val wild = js.**
     assertEquals(wild.a, JsArray(JsNull))
-    assert(wild.c.isInstanceOf[JsUndefined]) // No direct "c" field at top level
+    assertEquals(wild.c, JsArray(JsNull))
   }
 
   test("Wildcard serialization behavior") {
@@ -165,9 +165,61 @@ class JsonWildcardSuite extends munit.FunSuite {
     val parsed = Json.parse(json)
     parsed match {
       case JsObject(fields) =>
-        val fieldValue = fields.find(_._1 == "field").map(_._2).getOrElse(fail("Field not found"))
+        val fieldValue = fields.getOrElse("field", fail("Field not found"))
         assertEquals(fieldValue, JsString("value"))
       case _ => fail("Expected JsObject")
     }
   }
+
+  test("Wildcard to role") {
+    val json = Json.parse(
+      """{
+        |  "result" : {
+        |    "messages" : [ {
+        |      "role" : "user",
+        |      "content" : {
+        |        "type" : "text",
+        |        "text" : "This prompt includes Resource 1. Please analyze the following resource:"
+        |      }
+        |    }, {
+        |      "role" : "user",
+        |      "content" : {
+        |        "type" : "resource",
+        |        "resource" : {
+        |          "uri" : "test://static/resource/1",
+        |          "name" : "Resource 1",
+        |          "mimeType" : "text/plain",
+        |          "text" : "Resource 1: This is a plaintext resource"
+        |        }
+        |      }
+        |    } ]
+        |  },
+        |  "jsonrpc" : "2.0",
+        |  "id" : 1
+        |}""".stripMargin)
+
+    val roles = json.**.role.asSeqOrEmpty[String]
+    assertEquals(roles, Seq("user", "user"))
+  }
+
+  test("Wildcard within array") {
+    val json = Json.obj(
+      "result" -> JsArray(Json.obj("role" -> "user"), Json.obj("role" -> "assistant"))
+    )
+    val roles = json.**.role
+    assertEquals(roles, JsArray(JsString("user"), JsString("assistant")))
+  }
+
+  test("Wildcard within obj") {
+    val json = Json.obj("role" -> "user")
+    val roles = json.**.role
+    assertEquals(roles, JsArray(JsString("user")))
+  }
+
+  test("JsWildCard simple object field access - extra") {
+    val js = Json.obj("a" -> 1, "b" -> 2)
+    val ints = js.**.a
+    assertEquals(ints, JsArray(JsNumber(1)))
+  }
+
 }
