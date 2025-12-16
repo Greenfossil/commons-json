@@ -108,6 +108,11 @@ class JsonSuite extends munit.FunSuite {
     assertEquals(Json.parse("null"), JsNull)
   }
 
+  test("JsUndefined") {
+    val jsObj = Json.obj()
+    assertEquals(jsObj \ "age", JsUndefined("Missing node:[age]"))
+  }
+
   test("JsObject"){
     val jsonObj = Json.obj(
       "isActive" -> true,
@@ -176,7 +181,7 @@ class JsonSuite extends munit.FunSuite {
 
     assertEquals(jsonObj \\ "name", JsArray(Seq("Homer", "Greenfossil", "Marge"))) 
 
-    assertEquals(jsonObj \ "abc", JsUndefined("Handle non-existing keys"))
+    assertEquals(jsonObj \ "abc", JsUndefined("Missing node:[abc]"))
   }
 
   test("JsBoolean"){

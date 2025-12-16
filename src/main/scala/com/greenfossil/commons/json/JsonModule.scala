@@ -120,10 +120,15 @@ private class JsValueSerializer extends JsonSerializer[JsValue]:
       case JsObject(values) =>
         logger.debug(s"JsObject ${values.size}")
         json.writeStartObject()
-        values.foreach { t =>
-          logger.debug(s"value $t")
-          json.writeFieldName(t._1)
-          serialize(t._2, json, provider)
+        values.foreach { (name, value) =>
+          value match
+            case JsUndefined(_) =>
+              logger.debug(s"Skipping undefined field $name")
+            // omit the field entirely to represent "not present"
+            case _ =>
+              logger.debug(s"value $name -> $value")
+              json.writeFieldName(name)
+              serialize(value, json, provider)
         }
         json.writeEndObject()
       case JsWildCard(value) =>
@@ -185,7 +190,8 @@ private class JsValueDeserializer(factory: TypeFactory, klass: Class[?]) extends
           (Some(JsObject(content.toList)), stack)
         case _ => throw new RuntimeException("We should have been reading an object, something got wrong")
       }
-      case JsonTokenId.ID_NOT_AVAILABLE => (Some(JsUndefined("Handle non-existing keys")), parserContext)
+      case JsonTokenId.ID_NOT_AVAILABLE =>
+        (Some(JsUndefined("Missing node: ID_NOT_AVAILABLE")), parserContext)
       case JsonTokenId.ID_EMBEDDED_OBJECT => throw new RuntimeException("We should have been reading an object, something got wrong")
     }
 

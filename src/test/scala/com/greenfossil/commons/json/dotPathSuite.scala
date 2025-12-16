@@ -22,7 +22,7 @@ class dotPathSuite extends munit.FunSuite {
     assertNoDiff(jsValue.children(2).asText, "Lisa")
     assertEquals[Any, Any](jsValue.addr.value, JsUndefined.missingNode("addr").value)
     assertNoDiff(jsValue.addr.street.stringify, "")
-    assertEquals[Any, Any](jsValue.addr.street.value, JsUndefined.missingNode("addr").value)
+    assertEquals[Any, Any](jsValue.addr.street.value, JsUndefined.missingNode("street").value)
   }
 
   test("simple dot path with range"){
@@ -91,7 +91,7 @@ class dotPathSuite extends munit.FunSuite {
 
   test("JsNull"){
     assertEquals(JsNull.a, JsUndefined.missingNode("a"))
-    assertEquals(JsNull.a.b, JsUndefined.missingNode("a"))
+    assertEquals(JsNull.a.b, JsUndefined.missingNode("b"))
   }
 
   test("undefined value") {

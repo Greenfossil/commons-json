@@ -17,6 +17,7 @@
 package com.greenfossil.commons.json
 
 import com.fasterxml.jackson.databind.node.MissingNode
+import com.greenfossil.commons.json
 import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider
 import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider
 import com.jayway.jsonpath.{Configuration, JsonPath}
@@ -593,11 +594,11 @@ sealed trait JsValue extends Dynamic:
 
   inline def asZonedDateTimeOrNull: ZonedDateTime = asNonNullOpt[ZonedDateTime].orNull
 
-  def isDefined: Boolean =  asNonNullOpt.isDefined
+  def isDefined: Boolean =  !isEmpty
 
   def isEmpty: Boolean = asNonNullOpt.isEmpty
 
-  def nonEmpty: Boolean = asNonNullOpt.nonEmpty
+  def nonEmpty: Boolean = !isEmpty
 
 
   /**
@@ -670,8 +671,12 @@ sealed trait JsValue extends Dynamic:
   def \(childIndex: Int): JsValue = _get(childIndex)
 
   def \(path: String): JsValue =
-    if this.isInstanceOf[JsUndefined] then this
-    else jsonNodeToJsValue(_jsonNode.at(s"/$path"), classOf[JsValue])
+    if this.isInstanceOf[JsUndefined] then JsUndefined.missingNode(path)
+    else {
+      val n = _jsonNode.at(s"/$path")
+      if n.isMissingNode then JsUndefined.missingNode(path)
+      else jsonNodeToJsValue(n, classOf[JsValue])
+    }
 
   private def _get(start: Int, count: Int = 1): JsValue =
     require(count > 0, "count must be positive integer")
@@ -731,8 +736,7 @@ sealed trait JsValue extends Dynamic:
    * @return
    */
   def selectDynamic(name: String): JsValue = {
-    if this.isInstanceOf[JsUndefined] then
-      this
+    if this.isInstanceOf[JsUndefined] then JsUndefined.missingNode(name)
     else
       /*
        * Remove the escaped $ sign from the name if exists.
@@ -853,6 +857,10 @@ end JsValue
 case class JsString(value: String) extends JsValue:
   type A = String
 
+  override def isEmpty: Boolean = value == null || value.isEmpty
+  override def isDefined: Boolean = !isEmpty
+  override def nonEmpty: Boolean = !isEmpty
+
 /**
  * JsNumber
  */
@@ -955,7 +963,7 @@ case class JsObject(value: immutable.ListMap[String, JsValue]) extends JsValue:
     if nonNullFields == fields then this
     else JsObject(nonNullFields)
 
-  def apply(field: String): JsValue = value.getOrElse(field, JsUndefined(s"Field named:'$field' does not exists."))
+  def apply(field: String): JsValue = value.getOrElse(field, JsUndefined.missingNode(field))
 
   def ++ (otherObj: JsObject): JsObject =
     JsObject(value ++ otherObj.value)
@@ -1035,7 +1043,7 @@ end JsWildCard
 
 object JsUndefined:
 
-  def missingNode(msg: String): JsUndefined = JsUndefined(s"Missing node:[$msg].")
+  def missingNode(msg: String): JsUndefined = JsUndefined(s"Missing node:[$msg]")
 /**
  * JsUndefined
  * @param value
