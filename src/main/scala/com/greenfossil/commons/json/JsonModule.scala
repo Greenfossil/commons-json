@@ -105,7 +105,7 @@ private class JsValueSerializer extends JsonSerializer[JsValue]:
         logger.debug(s"JsNumber ${bd}")
         json.writeNumber(bd.bigDecimal)
       case t: JsTemporal =>
-        logger.debug(s"JsTemporal ${t.value}")
+        logger.debug(s"JsTemporal ${t.unboxed}")
         JsTemporal.toJson(t) match
           case l: Long => json.writeNumber(l)
           case s: String => json.writeString(s)

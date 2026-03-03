@@ -50,7 +50,7 @@ object Json:
         case (key, null) => (key, JsNull) +: result
         case (key, x : (String | Boolean | Number | Temporal | JsValue)) => (key, primitiveToJsValue(x)) +: result
         case (key, Some(jsArray: JsArray)) =>
-          if jsArray.value.isEmpty then result else  (key, jsArray) +: result
+          if jsArray.unboxed.isEmpty then result else  (key, jsArray) +: result
         case (key, Some(jsValue)) => (key, jsValue) +: result
         case (key, None) => result
     }
@@ -63,7 +63,7 @@ object Json:
         case null => JsNull +: result
         case jsValue: JsValue => jsValue +: result
         case Some(jsArray: JsArray) =>
-          if jsArray.value.isEmpty then result else jsArray +: result
+          if jsArray.unboxed.isEmpty then result else jsArray +: result
         case Some(jsValue) => jsValue +: result
         case None => result
     }

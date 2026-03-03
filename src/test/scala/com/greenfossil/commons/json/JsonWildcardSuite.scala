@@ -57,7 +57,7 @@ class JsonWildcardSuite extends munit.FunSuite {
 
     // Test wildcard with array - it returns the array wrapped in another array
     val wild = js.**
-    val usersField = wild.users.asInstanceOf[JsArray].value(0)
+    val usersField = wild.users.asInstanceOf[JsArray].unboxed(0)
     assertEquals(usersField, js.users)
     assertEquals(wild.name, JsArray(JsString("John"), JsString("Jane")))
   }
@@ -100,12 +100,12 @@ class JsonWildcardSuite extends munit.FunSuite {
 
     // Test wildcard behavior - finds all "id" fields at all levels
     val wild = js.**
-    val idValues = wild.id.asInstanceOf[JsArray].value
+    val idValues = wild.id.asInstanceOf[JsArray].unboxed
     assertEquals(idValues.size, 3)
     assert(idValues.contains(JsNumber(1)))
     assert(idValues.contains(JsNumber(2)))
     assert(idValues.contains(JsNumber(3)))
-    assertEquals(wild.user.asInstanceOf[JsArray].value(0), js.user)
+    assertEquals(wild.user.asInstanceOf[JsArray].unboxed(0), js.user)
   }
 
   test("Different value types in objects") {
@@ -126,7 +126,7 @@ class JsonWildcardSuite extends munit.FunSuite {
 
     // Test wildcard - finds all "field" values at all levels
     val wild = js.**
-    val fieldValues = wild.field.asInstanceOf[JsArray].value
+    val fieldValues = wild.field.asInstanceOf[JsArray].unboxed
     assertEquals(fieldValues.size, 3)
     assert(fieldValues.contains(JsString("text")))
     assert(fieldValues.contains(JsNumber(42)))
