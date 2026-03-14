@@ -16,4 +16,4 @@
 
 package com.greenfossil.commons.json
 
-class JsonException(message: String) extends Exception 
+class JsonException(message: String) extends Exception(message)
