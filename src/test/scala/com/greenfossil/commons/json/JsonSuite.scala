@@ -52,6 +52,14 @@ class JsonSuite extends munit.FunSuite {
     assertNoDiff(jsValue.toString, json)
   }
 
+  test("Json.parse with Try callback supports fold-style handling") {
+    val ok = Json.parse("""{"name":"Homer"}""", th => JsUndefined("parse-error"), identity)
+    assertEquals(ok \ "name", JsString("Homer"))
+
+    val invalid = Json.parse("""{"name":"Homer""", th => JsUndefined("parse-error"), identity)
+    assertEquals(invalid, JsUndefined("parse-error"))
+  }
+
   test("JsArray"){
     val jsObjects = for (i <- 1 to 5) yield Json.obj("value" -> (1 to i))
     val jsArray = JsArray(jsObjects)
@@ -111,6 +119,14 @@ class JsonSuite extends munit.FunSuite {
   test("JsUndefined") {
     val jsObj = Json.obj()
     assertEquals(jsObj \ "age", JsUndefined("Missing node:[age]"))
+  }
+
+  test("JsValue.at returns JsUndefined for missing pointer paths") {
+    val empty = Json.parse("{}")
+    assertEquals(empty.at("/name"), JsUndefined("Missing node:[/name]"))
+
+    val nested = Json.parse("""{"person":{}}""")
+    assertEquals(nested.at("/person/name"), JsUndefined("Missing node:[/person/name]"))
   }
 
   test("JsObject"){

@@ -16,25 +16,42 @@
 
 package com.greenfossil.commons.json
 
+import scala.util.Try
+
 object Json:
   import JsonModule.{jsonFactory, mapper}
 
   def parse(value: String): JsValue =
     mapper.readValue(jsonFactory.createParser(value), classOf[JsValue])
 
+  def parse[A <: JsValue](value: String, onFailure: Throwable => A, onSuccess: JsValue => A): A =
+    Try(parse(value)).fold(onFailure, onSuccess)
+
   def parse(bytes: Array[Byte]): JsValue =
     mapper.readValue(jsonFactory.createParser(bytes), classOf[JsValue])
 
+  def parse[A <: JsValue](bytes: Array[Byte], onFailure: Throwable => A, onSuccess: JsValue => A): A =
+    Try(parse(bytes)).fold(onFailure, onSuccess)
+
   def parse(stream: java.io.InputStream): JsValue =
     mapper.readValue(jsonFactory.createParser(stream), classOf[JsValue])
+
+  def parse[A <: JsValue](stream: java.io.InputStream, onFailure: Throwable => A, onSuccess: JsValue => A): A =
+    Try(parse(stream)).fold(onFailure, onSuccess)
 
   def parseBase64URL(base64Value: String, charSet: String): JsValue =
     val value = new String(java.util.Base64.getUrlDecoder.decode(base64Value), charSet)
     parse(value)
 
+  def parseBase64URL[A <: JsValue](bytes: Array[Byte], charSet: String, onFailure: Throwable => A, onSuccess: JsValue => A): A=
+    Try(parseBase64URL(new String(bytes, charSet), charSet)).fold(onFailure, onSuccess)
+
   def parseBase64URL(base64Value: String): JsValue =
     parseBase64URL(base64Value, "UTF-8")
-    
+
+  def parseBase64URL[A <: JsValue](base64Value: String, onFailure: Throwable => A, onSuccess: JsValue => A): A =
+    Try(parseBase64URL(base64Value)).fold(onFailure, onSuccess)
+
   def jwtClaims(tup: (String, JsValue)*): String =
     toJson(tup.toMap).encodeBase64URL
 
@@ -112,5 +129,3 @@ object Json:
 
   def prettyPrint(string: String): String =
     prettyPrint(Json.parse(string))
-
-

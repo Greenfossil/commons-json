@@ -674,7 +674,14 @@ sealed trait JsValue extends Dynamic:
    * @param path - /path/path - need to have a root forward slash
    * @return
    */
-  def at(path: String): JsValue = jsonNodeToJsValue(_jsonNode.at(path), classOf[JsValue])
+  def at(path: String): JsValue =
+    if this.isInstanceOf[JsUndefined] then JsUndefined.missingNode(path)
+    else
+      val n = _jsonNode.at(path)
+      if n == null || n.isMissingNode then JsUndefined.missingNode(path)
+      else
+        val v = jsonNodeToJsValue(n, classOf[JsValue])
+        if v == null then JsUndefined.missingNode(path) else v
 
   def \(childIndex: Int): JsValue = _get(childIndex)
 
