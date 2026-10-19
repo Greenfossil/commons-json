@@ -1,0 +1,98 @@
+# commons-json — LLM/AI quick reference
+
+Greenfossil's Scala 3 JSON AST and codec. Import:
+
+```scala
+import com.greenfossil.commons.json.*
+import scala.util.{Failure, Success, Try}
+```
+
+## Types
+
+`JsValue` → `JsObject` | `JsArray` | `JsString` | `JsNumber` | `JsBoolean` | `JsNull` | `JsTemporal` | `JsUndefined`.
+
+`JsObject` preserves field order (`ListMap`); `JsUndefined` is the missing-path sentinel.
+
+## Construction
+
+```scala
+Json.obj("name" -> "Ada", "age" -> 42, "tags" -> Json.arr("scala", "json"))
+Json.arr(1, 2, 3)
+Json.parse("""{"ok":true}""")
+```
+
+`Json.obj` drops `None`; `null` becomes JSON `null`. `Json.arr` drops `None` and empty optional arrays.
+
+## Reading
+
+```scala
+val value = Json.parse(input).as[JsObject]
+value("user")("name").asTextOpt            // chained field access
+value.at("/user/name").asTextOpt          // RFC 6901 JSON Pointer
+value \ "user" \ "name"                    // `\` path access
+value.as[MyCaseClass]                     // codec extraction
+value("missing").toOption                 // None (JsUndefined)
+```
+
+Typed accessors: `asTextOpt`, `asIntOpt`, `asBooleanOpt`, `asSeqOpt[T]`, `asJsObjectOpt`, `asJsArrayOpt`; defaulting variants end in `OrEmpty` / `OrElse`.
+
+## Structured lookup and errors
+
+```scala
+val pointer = JsonPointer.parse("/payload/question").get
+pointer.select(value) match
+  case Success(v)    => v.asText
+  case Failure(err)  => err.asInstanceOf[JsonAccessError].path
+
+JsonPointer.parse("/a~1b")   // Try[JsonPointer]; escapes ~ and / per RFC 6901
+JsonPointer.escape("a/b")    // "a~1b"
+```
+
+`JsonPointer.select` returns `Try[JsValue]`: a missing path is
+`Failure(JsonAccessError)`, while a real `null` is `Success(JsNull)`. Use
+`selectOpt` when absence is expected.
+
+## AI/streaming helpers
+
+```scala
+Json.canonical(value)        // recursively sorted object keys, arrays keep order
+Json.canonicalString(value)  // deterministic compact JSON
+
+Json.parseTry(text)          // Try[JsValue] — String
+Json.parseTry(bytes)         // Try[JsValue] — Array[Byte]
+Json.parseTry(stream)        // Try[JsValue] — InputStream
+Json.parseBase64URLTry(b64)  // Try[JsValue] — URL-safe Base64
+Json.parseBase64URLTry(b64, charset)
+Json.parseBase64URLTry(bytes, charset)
+Json.parseLines(text)        // Seq[Try[JsValue]], one per non-blank line
+Json.stringifyLines(values)  // one compact JSON value per line
+```
+
+Use canonical output for hashing/caching/replay; use JSONL for event/trajectory streams. A malformed line is `Failure(JsonLineError(...))` carrying its 1-based line number and original input.
+
+## Writing
+
+```scala
+Json.stringify(value)        // compact
+Json.prettyPrint(value)      // indented
+Json.toBytes(value)
+value.stringify
+```
+
+## Jackson 3 compatibility
+
+commons-json 1.5.0-RC1 uses Jackson 3 (`tools.jackson`) internally. It can
+coexist with the Jackson 2 used by Armeria. `json-path` uses its Jackson 3
+providers. The public `JsValue`/`Json` API is unchanged; `JsValue._jsonNode`
+and `jsonNodeToJsValue` are internal helpers and now use
+`tools.jackson.databind.JsonNode`.
+
+Jackson 2 parsing defaults are retained, including exact BigDecimal values and
+trailing-token behavior. See `docs/jackson3-migration.md`.
+
+## Pitfalls
+
+- `apply`/`\` return `JsUndefined` for missing paths; use `toOption` or `JsonPointer.selectOpt` when absence matters.
+- `as[T]` throws `JsonException`; prefer `asOpt[T]` for model/tool input.
+- Object key order is insertion order unless you call `Json.canonical`.
+- JSONL is newline-delimited **values**, not a single JSON array; blank lines are ignored.

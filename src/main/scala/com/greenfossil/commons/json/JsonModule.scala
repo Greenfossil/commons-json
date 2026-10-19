@@ -16,16 +16,16 @@
 
 package com.greenfossil.commons.json
 
-import com.fasterxml.jackson.core.*
-import com.fasterxml.jackson.core.json.JsonWriteFeature
-import com.fasterxml.jackson.core.util.DefaultPrettyPrinter
-import com.fasterxml.jackson.databind.*
-import com.fasterxml.jackson.databind.`type`.TypeFactory
-import com.fasterxml.jackson.databind.deser.Deserializers
-import com.fasterxml.jackson.databind.json.JsonMapper
-import com.fasterxml.jackson.databind.module.SimpleModule
-import com.fasterxml.jackson.databind.node.JsonNodeFactory
-import com.fasterxml.jackson.databind.ser.Serializers
+import com.fasterxml.jackson.annotation.JsonFormat
+import tools.jackson.core.*
+import tools.jackson.core.json.JsonWriteFeature
+import tools.jackson.databind.*
+import tools.jackson.databind.`type`.TypeFactory
+import tools.jackson.databind.cfg.JsonNodeFeature
+import tools.jackson.databind.deser.Deserializers
+import tools.jackson.databind.json.JsonMapper
+import tools.jackson.databind.module.SimpleModule
+import tools.jackson.databind.ser.Serializers
 
 import java.io.StringWriter
 import scala.annotation.{switch, tailrec}
@@ -34,28 +34,26 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
 private[json] object JsonModule:
 
-  //https://github.com/FasterXML/jackson-databind/issues/2087
-  //Setup to use BigDecimal
-  lazy val mapper = JsonMapper.builder()
+  // Jackson 2 defaults are retained for this minor release. Jackson 3 changed
+  // several defaults (trailing tokens, primitive nulls, enum strings), so use
+  // the explicit compatibility builder and keep exact BigDecimals.
+  lazy val mapper = JsonMapper.builderWithJackson2Defaults()
     .enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
-    .enable(JsonGenerator.Feature.WRITE_BIGDECIMAL_AS_PLAIN)
-    .nodeFactory(JsonNodeFactory(true))
-    .addModules(new JsonModule)
+    .enable(StreamWriteFeature.WRITE_BIGDECIMAL_AS_PLAIN)
+    .disable(JsonNodeFeature.STRIP_TRAILING_BIGDECIMAL_ZEROES)
+    .addModule(new JsonModule)
     .build()
-
-  lazy val jsonFactory = new JsonFactory(mapper)
 
   def generateFromJsValue(jsValue: JsValue, escapeNonASCII: Boolean): String =
     withStringWriter { sw =>
-      val gen = jsonFactory.createGenerator(sw)
-      gen.configure(JsonWriteFeature.ESCAPE_NON_ASCII.mappedFeature(), escapeNonASCII)
-      mapper.writeValue(gen, jsValue)
+      val writer =
+        if escapeNonASCII then mapper.writer().`with`(JsonWriteFeature.ESCAPE_NON_ASCII)
+        else mapper.writer()
+      writer.writeValue(sw, jsValue)
     }
 
   def prettyPrint(jsValue: JsValue): String = withStringWriter { sw =>
-    val gen = jsonFactory.createGenerator(sw).setPrettyPrinter(new DefaultPrettyPrinter())
-    val writer = mapper.writerWithDefaultPrettyPrinter()
-    writer.writeValue(gen, jsValue)
+    mapper.writerWithDefaultPrettyPrinter().writeValue(sw, jsValue)
   }
 
   private def withStringWriter(f: StringWriter => Unit): String = {
@@ -76,20 +74,18 @@ private[json] object JsonModule:
 end JsonModule
 
 class JsonModule extends SimpleModule("JsonModule", Version.unknownVersion()):
-  override def setupModule(context: Module.SetupContext): Unit =
+  override def setupModule(context: JacksonModule.SetupContext): Unit =
     context.addDeserializers(new JsonDeserializers())
     context.addSerializers(new JsonSerializers())
 
 private class JsonSerializers extends Serializers.Base:
-  override def findSerializer(config: SerializationConfig, javaType: JavaType, beanDesc: BeanDescription) =
-    val ser = 
-      if (classOf[JsValue].isAssignableFrom(beanDesc.getBeanClass)) 
-      then new JsValueSerializer()
-      else null
-    ser.asInstanceOf[JsonSerializer[Object]]
+  override def findSerializer(config: SerializationConfig, javaType: JavaType,
+      beanDesc: BeanDescription.Supplier, format: JsonFormat.Value): ValueSerializer[?] =
+    if classOf[JsValue].isAssignableFrom(beanDesc.getBeanClass) then new JsValueSerializer
+    else null
 
-private class JsValueSerializer extends JsonSerializer[JsValue]:
-  override def serialize(value: JsValue, json: JsonGenerator, provider: SerializerProvider): Unit =
+private class JsValueSerializer extends ValueSerializer[JsValue]:
+  override def serialize(value: JsValue, json: JsonGenerator, provider: SerializationContext): Unit =
     logger.debug(s"Serialize...")
     value match
       case null =>
@@ -127,7 +123,7 @@ private class JsValueSerializer extends JsonSerializer[JsValue]:
             // omit the field entirely to represent "not present"
             case _ =>
               logger.debug(s"value $name -> $value")
-              json.writeFieldName(name)
+              json.writeName(name)
               serialize(value, json, provider)
         }
         json.writeEndObject()
@@ -141,15 +137,21 @@ private class JsValueSerializer extends JsonSerializer[JsValue]:
         //ignore
 
 private class JsonDeserializers extends Deserializers.Base:
-  override def findBeanDeserializer(javaType: JavaType, config: DeserializationConfig, beanDesc: BeanDescription) =
+  override def hasDeserializerFor(config: DeserializationConfig, klass: Class[?]): Boolean =
+    classOf[JsValue].isAssignableFrom(klass) || klass == JsNull.getClass
+
+  override def findBeanDeserializer(javaType: JavaType, config: DeserializationConfig,
+      beanDesc: BeanDescription.Supplier): ValueDeserializer[?] =
     val klass = javaType.getRawClass
     if classOf[JsValue].isAssignableFrom(klass) || klass == JsNull.getClass
     then new JsValueDeserializer(config.getTypeFactory, klass)
     else null
 
-private class JsValueDeserializer(factory: TypeFactory, klass: Class[?]) extends JsonDeserializer[Object]:
+private class JsValueDeserializer(factory: TypeFactory, klass: Class[?]) extends ValueDeserializer[Object]:
 
   override def isCachable: Boolean = true
+
+  override def getNullValue(ctxt: DeserializationContext): JsValue = JsNull
 
   override def deserialize(jp: JsonParser, ctxt: DeserializationContext): JsValue =
     val value = deserialize(jp, ctxt, List())
@@ -157,17 +159,17 @@ private class JsValueDeserializer(factory: TypeFactory, klass: Class[?]) extends
     value
 
   private def parseBigDecimal(jp: JsonParser, parserContext: List[DeserializerContext]): (Some[JsNumber], List[DeserializerContext]) =
-    val inputText = jp.getText
+    val inputText = jp.getString
     val bigDecimal = BigDecimal(inputText)
     (Some(JsNumber(bigDecimal)), parserContext)
 
   @tailrec
   final def deserialize(jp: JsonParser, ctxt: DeserializationContext, parserContext: List[DeserializerContext]): JsValue = {
-    if (jp.getCurrentToken == null) { jp.nextToken() }
+    if (jp.currentToken == null) { jp.nextToken() }
 
-    val (maybeValue, nextContext) = (jp.getCurrentToken.id(): @switch) match {
+    val (maybeValue, nextContext) = (jp.currentToken.id(): @switch) match {
       case JsonTokenId.ID_NUMBER_INT | JsonTokenId.ID_NUMBER_FLOAT => parseBigDecimal(jp, parserContext)
-      case JsonTokenId.ID_STRING => (Some(JsString(jp.getText)), parserContext)
+      case JsonTokenId.ID_STRING => (Some(JsString(jp.getString)), parserContext)
       case JsonTokenId.ID_TRUE => (Some(JsBoolean(true)), parserContext)
       case JsonTokenId.ID_FALSE => (Some(JsBoolean(false)), parserContext)
       case JsonTokenId.ID_NULL => (Some(JsNull), parserContext)
@@ -180,7 +182,7 @@ private class JsValueDeserializer(factory: TypeFactory, klass: Class[?]) extends
       }
       case JsonTokenId.ID_START_OBJECT =>
         (None, ReadingMap(ListBuffer()) +: parserContext)
-      case JsonTokenId.ID_FIELD_NAME => parserContext match {
+      case JsonTokenId.ID_PROPERTY_NAME => parserContext match {
         case (c: ReadingMap) :: stack => 
           (None, c.setField(jp.currentName) +: stack)
         case _ => throw new RuntimeException("We should be reading map, something got wrong")
@@ -201,7 +203,7 @@ private class JsValueDeserializer(factory: TypeFactory, klass: Class[?]) extends
     maybeValue match
       case Some(v) if nextContext.isEmpty =>
         // done, no more tokens and got a value!
-        // note: jp.getCurrentToken == null happens when using treeToValue (we're not parsing tokens)
+        // note: jp.currentToken == null happens when using treeToValue (we're not parsing tokens)
         v
       case maybeValue =>
         val toPass = maybeValue.map { v =>
@@ -209,9 +211,6 @@ private class JsValueDeserializer(factory: TypeFactory, klass: Class[?]) extends
         }.getOrElse(nextContext)
         deserialize(jp, ctxt, toPass)
   }
-
-  // This is used when the root object is null, ie when deserializing "null"
-  override val getNullValue = JsNull
 
 end JsValueDeserializer
 

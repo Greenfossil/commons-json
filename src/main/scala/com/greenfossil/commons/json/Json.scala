@@ -19,22 +19,32 @@ package com.greenfossil.commons.json
 import scala.util.Try
 
 object Json:
-  import JsonModule.{jsonFactory, mapper}
+  import JsonModule.mapper
 
   def parse(value: String): JsValue =
-    mapper.readValue(jsonFactory.createParser(value), classOf[JsValue])
+    mapper.readValue(value, classOf[JsValue])
+
+  /** Safe variant of [[parse]] for tool/LLM boundaries and for-comprehensions. */
+  def parseTry(value: String): Try[JsValue] =
+    Try(parse(value))
 
   def parse[A <: JsValue](value: String, onFailure: Throwable => A, onSuccess: JsValue => A): A =
     Try(parse(value)).fold(onFailure, onSuccess)
 
+  def parseTry(bytes: Array[Byte]): Try[JsValue] =
+    Try(parse(bytes))
+
   def parse(bytes: Array[Byte]): JsValue =
-    mapper.readValue(jsonFactory.createParser(bytes), classOf[JsValue])
+    mapper.readValue(bytes, classOf[JsValue])
 
   def parse[A <: JsValue](bytes: Array[Byte], onFailure: Throwable => A, onSuccess: JsValue => A): A =
     Try(parse(bytes)).fold(onFailure, onSuccess)
 
+  def parseTry(stream: java.io.InputStream): Try[JsValue] =
+    Try(parse(stream))
+
   def parse(stream: java.io.InputStream): JsValue =
-    mapper.readValue(jsonFactory.createParser(stream), classOf[JsValue])
+    mapper.readValue(stream, classOf[JsValue])
 
   def parse[A <: JsValue](stream: java.io.InputStream, onFailure: Throwable => A, onSuccess: JsValue => A): A =
     Try(parse(stream)).fold(onFailure, onSuccess)
@@ -46,8 +56,17 @@ object Json:
   def parseBase64URL[A <: JsValue](bytes: Array[Byte], charSet: String, onFailure: Throwable => A, onSuccess: JsValue => A): A=
     Try(parseBase64URL(new String(bytes, charSet), charSet)).fold(onFailure, onSuccess)
 
+  def parseBase64URLTry(base64Value: String, charSet: String): Try[JsValue] =
+    Try(parseBase64URL(base64Value, charSet))
+
+  def parseBase64URLTry(bytes: Array[Byte], charSet: String): Try[JsValue] =
+    Try(parseBase64URL(new String(bytes, charSet), charSet))
+
   def parseBase64URL(base64Value: String): JsValue =
     parseBase64URL(base64Value, "UTF-8")
+
+  def parseBase64URLTry(base64Value: String): Try[JsValue] =
+    Try(parseBase64URL(base64Value))
 
   def parseBase64URL[A <: JsValue](base64Value: String, onFailure: Throwable => A, onSuccess: JsValue => A): A =
     Try(parseBase64URL(base64Value)).fold(onFailure, onSuccess)
@@ -129,3 +148,24 @@ object Json:
 
   def prettyPrint(string: String): String =
     prettyPrint(Json.parse(string))
+
+  /** Deterministic JSON: object keys sorted recursively. Arrays keep their
+    * order (semantics), so hashing/caching/replay can depend on the result. */
+  def canonical(jsValue: JsValue): JsValue =
+    jsValue match
+      case JsObject(fields) =>
+        JsObject(fields.toSeq.sortBy(_._1).map((key, value) => key -> canonical(value)))
+      case JsArray(items) =>
+        JsArray(items.map(canonical))
+      case other => other
+
+  def canonicalString(jsValue: JsValue): String =
+    stringify(canonical(jsValue))
+
+  /** Parse newline-delimited JSON (JSONL). Blank lines are ignored. */
+  def parseLines(value: String): Seq[Try[JsValue]] =
+    JsonLines.parse(value)
+
+  /** Serialize values as newline-delimited JSON (JSONL). */
+  def stringifyLines(values: Iterable[JsValue]): String =
+    JsonLines.stringify(values)

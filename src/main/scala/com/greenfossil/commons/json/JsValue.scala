@@ -16,10 +16,10 @@
 
 package com.greenfossil.commons.json
 
-import com.fasterxml.jackson.databind.node.MissingNode
+import tools.jackson.databind.node.MissingNode
 import com.greenfossil.commons.json
-import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider
-import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider
+import com.jayway.jsonpath.spi.json.Jackson3JsonNodeJsonProvider
+import com.jayway.jsonpath.spi.mapper.Jackson3MappingProvider
 import com.jayway.jsonpath.{Configuration, JsonPath}
 import org.slf4j.LoggerFactory
 
@@ -657,9 +657,9 @@ sealed trait JsValue extends Dynamic:
       case JsUndefined(_) => None
       case _ => Option(this)
 
-  import com.fasterxml.jackson.databind.JsonNode
+  import tools.jackson.databind.JsonNode
 
-  val _jsonNode: JsonNode = JsonModule.mapper.valueToTree(this)
+  val _jsonNode: JsonNode = JsonModule.mapper.valueToTree[JsonNode](this)
 
   export _jsonNode.{
     binaryValue, booleanValue, decimalValue, floatValue, longValue, intValue,
@@ -698,7 +698,7 @@ sealed trait JsValue extends Dynamic:
     if !this.isInstanceOf[JsArray] then JsUndefined("Node must be an JsArray")
     else
       import scala.jdk.CollectionConverters.*
-      val _nodes = _jsonNode.elements().asScala.toList
+      val _nodes = _jsonNode.values().asScala.toList
       val xs = {
         if start >= 0 then _nodes.slice(start, start + count)
         else _nodes.dropRight(start.abs - 1).takeRight(count)
@@ -722,9 +722,9 @@ sealed trait JsValue extends Dynamic:
    * @param path
    * @return
    */
-  val _jacksonConfig =  Configuration.builder()
-    .jsonProvider(JacksonJsonNodeJsonProvider())
-    .mappingProvider(JacksonMappingProvider())
+  val _jacksonConfig = Configuration.builder()
+    .jsonProvider(Jackson3JsonNodeJsonProvider(JsonModule.mapper))
+    .mappingProvider(Jackson3MappingProvider(JsonModule.mapper))
     .build()
 
   /**
@@ -800,11 +800,11 @@ sealed trait JsValue extends Dynamic:
       case _  => logWarnAndThrow("Maximum 2 arguments (index, length)")
 
   private def _nodeTraverse(name: String, node: JsonNode, acc: Seq[JsValue], innerFieldValidator: JsValue => Boolean): Seq[JsValue] =
-    import com.fasterxml.jackson.databind.node.ArrayNode
+    import tools.jackson.databind.node.ArrayNode
 
     import scala.jdk.CollectionConverters.*
     if node.isObject then
-      val fieldNames = node.fieldNames().asScala
+      val fieldNames = node.propertyNames().asScala
       fieldNames.foldLeft(acc) { (res, fieldName) =>
         if fieldName != name then res ++ _nodeTraverse(name, node.get(fieldName), acc, innerFieldValidator)
         else

@@ -32,6 +32,24 @@ Add `commons-json` as a dependency in your project:
 
 Note that this library requires at least Java 17 or later to build.
 
+### Jackson 3 (1.5.0-RC1)
+
+The `1.5.0-RC1` release candidate migrates the internal JSON engine to Jackson
+**3.1.8** (`tools.jackson`). This decouples commons-json from the Jackson 2
+version used internally by Armeria: both Jackson 2 and Jackson 3 can coexist on
+the same classpath.
+
+- `json-path` uses its Jackson 3 providers.
+- The public `JsValue`/`Json` API is unchanged.
+- `JsValue._jsonNode` and `jsonNodeToJsValue` are internal helpers and now use
+  `tools.jackson.databind.JsonNode`.
+- Jackson 2 parsing defaults are retained (including exact BigDecimal values
+  and trailing-token behavior).
+
+See [docs/jackson3-migration.md](docs/jackson3-migration.md) for migration and
+compatibility details. This version is **unreleased** and has not been
+published.
+
 ## JSON Abstract Syntax Tree
 The entire JSON AST revolves in one type `com.greenfossil.commons.json.JsValue`, and has the following subtypes: 
 * `JsNull`: JSON null value
@@ -80,6 +98,53 @@ Result:
 ```json
  {"firstname":"Homer","lastname":"Simpson","address":{"country":"Singapore","street":"Orchard Road"},"children":["Maggie","Bart","Lisa"]}
 ```
+
+### Deterministic output
+
+```scala
+Json.canonical(json)        // recursively sorted object keys; array order preserved
+Json.canonicalString(json)  // compact, deterministic text
+```
+
+Use this for hashing, caching, replay, or comparing tool/model payloads. Ordinary
+`Json.stringify` preserves insertion order.
+
+### JSON Pointer with explicit errors
+
+```scala
+val pointer = JsonPointer.parse("/address/country").get
+pointer.select(json) match
+  case Success(value)   => value.asText
+  case Failure(error)   => error.asInstanceOf[JsonAccessError].path
+```
+
+`JsonPointer.select` returns `Try[JsValue]`: a missing path is
+`Failure(JsonAccessError)`, while a real JSON `null` is `Success(JsNull)`.
+`JsonPointer.escape` / `unescape` implement RFC 6901 `~0` / `~1` escaping.
+
+### Safe parse variants
+
+Every input form has a non-throwing counterpart:
+
+```scala
+Json.parseTry(text)                  // Try[JsValue]
+Json.parseTry(bytes)                 // Array[Byte]
+Json.parseTry(stream)                // InputStream
+Json.parseBase64URLTry(base64)       // URL-safe Base64, UTF-8
+Json.parseBase64URLTry(base64, cs)   // explicit charset
+Json.parseBase64URLTry(bytes, cs)
+```
+
+### JSONL (newline-delimited JSON)
+
+```scala
+val parsed: Seq[Try[JsValue]] = Json.parseLines(text)
+val output = Json.stringifyLines(values)
+```
+
+Blank lines are ignored. A malformed line is `Failure(JsonLineError(...))`
+carrying its 1-based line number and the original input, so one bad event does
+not discard the rest of a stream.
 
 #### Prettify JSON value
 ```scala

@@ -1,8 +1,9 @@
 package com.greenfossil.commons.json
 
-import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
-import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider
-import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider
+import tools.jackson.databind.JsonNode
+import tools.jackson.databind.json.JsonMapper
+import com.jayway.jsonpath.spi.json.Jackson3JsonNodeJsonProvider
+import com.jayway.jsonpath.spi.mapper.Jackson3MappingProvider
 import com.jayway.jsonpath.{Configuration, DocumentContext, JsonPath}
 
 /**
@@ -51,10 +52,10 @@ class JsonPathSuite extends munit.FunSuite {
 
   test("JacksonJsonNodeProvider"){
     val jacksonConf: Configuration = Configuration.builder()
-      .jsonProvider(JacksonJsonNodeJsonProvider())
-      .mappingProvider(JacksonMappingProvider())
+      .jsonProvider(Jackson3JsonNodeJsonProvider())
+      .mappingProvider(Jackson3MappingProvider())
       .build()
-    val om = ObjectMapper()
+    val om = JsonMapper.builder().build()
     val jsValue = om.readTree(jsonString)
     val dc: DocumentContext = JsonPath.using(jacksonConf).parse(jsValue)
     val books = dc.read[JsonNode]("$.store.book[*]")
@@ -67,10 +68,10 @@ class JsonPathSuite extends munit.FunSuite {
 
   }
 
-  test("base function".ignore){
+  test("base function"){
   val jacksonConf: Configuration = Configuration.builder()
-    .jsonProvider(JacksonJsonNodeJsonProvider())
-    .mappingProvider(JacksonMappingProvider())
+    .jsonProvider(Jackson3JsonNodeJsonProvider())
+    .mappingProvider(Jackson3MappingProvider())
     .build()
     val books = JsonPath.parse(jsonString).read("$.store..*", classOf[Any])
     books match {
