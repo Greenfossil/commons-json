@@ -65,7 +65,7 @@ value.stringify
 
 ## Jackson 3 compatibility
 
-commons-json 1.5.0-RC1 uses Jackson 3 (`tools.jackson`) internally. It can
+commons-json 1.5.0-RC2 uses Jackson 3 (`tools.jackson`) internally. It can
 coexist with the Jackson 2 used by Armeria. `json-path` uses its Jackson 3
 providers. The public `JsValue`/`Json` API is unchanged; `JsValue._jsonNode`
 and `jsonNodeToJsValue` are internal helpers and now use

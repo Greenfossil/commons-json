@@ -2,7 +2,7 @@ name := "commons-json"
 
 organization := "com.greenfossil"
 
-version := "1.5.0-RC1"
+version := "1.5.0-RC2"
 
 scalaVersion := "3.8.3"
 

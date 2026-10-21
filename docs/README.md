@@ -5,7 +5,7 @@ Start with the [README](../README.md) for installation and the public API.
 ## Guides
 
 - [Jackson 3 migration](jackson3-migration.md) — dependency, compatibility and
-  upgrade notes for `1.5.0-RC1`.
+  upgrade notes for `1.5.0-RC2`.
 - [llms.txt](../llms.txt) — compact AI/LLM-oriented API reference.
 - [Changelog](../CHANGELOG.md) — release history.
 

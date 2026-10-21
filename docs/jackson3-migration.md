@@ -1,6 +1,7 @@
-# Jackson 3 migration (1.5.0-RC1)
+# Jackson 3 migration (1.5.0-RC2)
 
-Status: **unreleased**. No tag or Maven publication has been performed.
+Status: **release candidate**. `1.5.0-RC2` supersedes `1.5.0-RC1`, which
+failed clean compilation; no Maven publication was performed for RC1.
 
 ## Why
 
@@ -57,7 +58,7 @@ JsValue.jsonNodeToJsValue(node: tools.jackson.databind.JsonNode, ...)
 
 If application code used `_jsonNode` or `jsonNodeToJsValue` directly, update its
 Jackson imports and types. This is the only intentional source/binary
-compatibility exception in 1.5.0-RC1 and is why these members are documented as
+compatibility exception in 1.5.0-RC2 and is why these members are documented as
 internal rather than supported public API.
 
 All normal `Json`/`JsValue` operations remain source-compatible.
@@ -88,7 +89,7 @@ source of truth.
 Update the dependency when the candidate is available:
 
 ```sbt
-libraryDependencies += "com.greenfossil" %% "commons-json" % "1.5.0-RC1"
+libraryDependencies += "com.greenfossil" %% "commons-json" % "1.5.0-RC2"
 ```
 
 Applications that also use Armeria should keep Armeria's Jackson 2 dependency;

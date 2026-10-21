@@ -32,9 +32,9 @@ Add `commons-json` as a dependency in your project:
 
 Note that this library requires at least Java 17 or later to build.
 
-### Jackson 3 (1.5.0-RC1)
+### Jackson 3 (1.5.0-RC2)
 
-The `1.5.0-RC1` release candidate migrates the internal JSON engine to Jackson
+The `1.5.0-RC2` release candidate migrates the internal JSON engine to Jackson
 **3.1.8** (`tools.jackson`). This decouples commons-json from the Jackson 2
 version used internally by Armeria: both Jackson 2 and Jackson 3 can coexist on
 the same classpath.
@@ -47,8 +47,8 @@ the same classpath.
   and trailing-token behavior).
 
 See [docs/jackson3-migration.md](docs/jackson3-migration.md) for migration and
-compatibility details. This version is **unreleased** and has not been
-published.
+compatibility details. This version is the current release candidate; Maven
+publication is handled by the release workflow.
 
 ## JSON Abstract Syntax Tree
 The entire JSON AST revolves in one type `com.greenfossil.commons.json.JsValue`, and has the following subtypes: 

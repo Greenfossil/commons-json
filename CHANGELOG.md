@@ -1,8 +1,9 @@
 # Changelog
 
-## 1.5.0-RC1 — unreleased
+## 1.5.0-RC2 — unreleased
 
-This release candidate is **not published**.
+This release candidate supersedes `1.5.0-RC1`, whose tag points at a commit
+that failed clean compilation. It is **not published**.
 
 ### Added
 
@@ -20,6 +21,13 @@ This release candidate is **not published**.
   unnecessary enhancement; use the existing `JsValue` path accessors and their
   `toOption` variants.
 
+### Fixed
+
+- Restored `JsonLines` / `JsonLineError` in a dedicated source file. They had
+  been co-located inside `JsonPointer.scala` and were accidentally deleted with
+  it, while `Json.parseLines` / `Json.stringifyLines` still referenced them;
+  clean builds now compile again.
+
 ### Changed
 
 - Migrated the internal JSON engine to Jackson **3.1.8** (`tools.jackson`).
@@ -29,7 +37,7 @@ This release candidate is **not published**.
 - Updated README, `llms.txt`, and Scaladoc for the new APIs and migration.
 - Added `docs/jackson3-migration.md` with dependency, compatibility, and
   consumer upgrade guidance.
-- Set the local build version to `1.5.0-RC1`.
+- Set the local build version to `1.5.0-RC2`.
 
 ### Compatibility notes
 
@@ -41,4 +49,5 @@ This release candidate is **not published**.
   `JsonMapper.builderWithJackson2Defaults()`, with exact BigDecimal values
   explicitly preserved.
 - `jackson-annotations` remains on the Jackson 2.x coordinate/package.
-- No tag or Maven publication was performed for this candidate.
+- No Maven publication was performed for `1.5.0-RC1`; its tag remains at the
+  failed commit and must not be reused.
