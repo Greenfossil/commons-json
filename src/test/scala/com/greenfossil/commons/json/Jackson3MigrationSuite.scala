@@ -48,10 +48,6 @@ class Jackson3MigrationSuite extends munit.FunSuite:
     assert(!JsonModule.mapper.isEnabled(EnumFeature.READ_ENUMS_USING_TO_STRING))
     assert(!JsonModule.mapper.isEnabled(JsonNodeFeature.STRIP_TRAILING_BIGDECIMAL_ZEROES))
 
-  test("JsonPointer selects escaped property names"):
-    val value = Json.parse("""{"a/b":{"~key":1}}""")
-    assertEquals(JsonPointer.parse("/a~1b/~0key").get.select(value).get.asInt, 1)
-
   test("JSONL accepts CRLF and blank lines"):
     val parsed = Json.parseLines("{\"a\":1}\r\n\r\n{\"b\":2}\r\n")
     assertEquals(parsed.size, 2)

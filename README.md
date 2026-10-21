@@ -109,19 +109,6 @@ Json.canonicalString(json)  // compact, deterministic text
 Use this for hashing, caching, replay, or comparing tool/model payloads. Ordinary
 `Json.stringify` preserves insertion order.
 
-### JSON Pointer with explicit errors
-
-```scala
-val pointer = JsonPointer.parse("/address/country").get
-pointer.select(json) match
-  case Success(value)   => value.asText
-  case Failure(error)   => error.asInstanceOf[JsonAccessError].path
-```
-
-`JsonPointer.select` returns `Try[JsValue]`: a missing path is
-`Failure(JsonAccessError)`, while a real JSON `null` is `Success(JsNull)`.
-`JsonPointer.escape` / `unescape` implement RFC 6901 `~0` / `~1` escaping.
-
 ### Safe parse variants
 
 Every input form has a non-throwing counterpart:

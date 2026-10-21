@@ -6,8 +6,6 @@ This release candidate is **not published**.
 
 ### Added
 
-- RFC 6901 `JsonPointer` with `parse`/`parseOpt`, `select`/`selectOpt`,
-  `escape`, `unescape`, and `JsonAccessError` for missing paths.
 - Safe parsing helpers: `Json.parseTry` for `String`, `Array[Byte]` and
   `InputStream`, plus `Json.parseBase64URLTry` variants.
 - Deterministic output helpers: `Json.canonical` and `Json.canonicalString`.
@@ -15,6 +13,12 @@ This release candidate is **not published**.
   `JsonLineError` diagnostics.
 - Regression coverage for the Jackson 3 migration and the retained Jackson 2
   compatibility defaults.
+
+### Removed
+
+- The unreleased `JsonPointer` / `JsonAccessError` helper was removed as an
+  unnecessary enhancement; use the existing `JsValue` path accessors and their
+  `toOption` variants.
 
 ### Changed
 

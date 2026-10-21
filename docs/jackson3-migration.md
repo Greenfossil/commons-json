@@ -60,7 +60,7 @@ Jackson imports and types. This is the only intentional source/binary
 compatibility exception in 1.5.0-RC1 and is why these members are documented as
 internal rather than supported public API.
 
-`JsonPointer` and all normal `Json`/`JsValue` operations are source-compatible.
+All normal `Json`/`JsValue` operations remain source-compatible.
 
 ## Behavior compatibility
 

@@ -36,22 +36,6 @@ value("missing").toOption                 // None (JsUndefined)
 
 Typed accessors: `asTextOpt`, `asIntOpt`, `asBooleanOpt`, `asSeqOpt[T]`, `asJsObjectOpt`, `asJsArrayOpt`; defaulting variants end in `OrEmpty` / `OrElse`.
 
-## Structured lookup and errors
-
-```scala
-val pointer = JsonPointer.parse("/payload/question").get
-pointer.select(value) match
-  case Success(v)    => v.asText
-  case Failure(err)  => err.asInstanceOf[JsonAccessError].path
-
-JsonPointer.parse("/a~1b")   // Try[JsonPointer]; escapes ~ and / per RFC 6901
-JsonPointer.escape("a/b")    // "a~1b"
-```
-
-`JsonPointer.select` returns `Try[JsValue]`: a missing path is
-`Failure(JsonAccessError)`, while a real `null` is `Success(JsNull)`. Use
-`selectOpt` when absence is expected.
-
 ## AI/streaming helpers
 
 ```scala
@@ -92,7 +76,7 @@ trailing-token behavior. See `docs/jackson3-migration.md`.
 
 ## Pitfalls
 
-- `apply`/`\` return `JsUndefined` for missing paths; use `toOption` or `JsonPointer.selectOpt` when absence matters.
+- `apply`/`\` return `JsUndefined` for missing paths; use `toOption` when absence matters.
 - `as[T]` throws `JsonException`; prefer `asOpt[T]` for model/tool input.
 - Object key order is insertion order unless you call `Json.canonical`.
 - JSONL is newline-delimited **values**, not a single JSON array; blank lines are ignored.
