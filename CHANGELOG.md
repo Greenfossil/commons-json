@@ -1,9 +1,10 @@
 # Changelog
 
-## 1.5.0-RC2 — unreleased
+## 1.5.0 — 2026-10-26 (final)
 
-This release candidate supersedes `1.5.0-RC1`, whose tag points at a commit
-that failed clean compilation. It is **not published**.
+Final release of the 1.5.0 line; it supersedes `1.5.0-RC2`, whose tag points at
+a commit that failed clean compilation (the RC1 tag). Everything below is the
+1.5.0 contract — no release-candidate dependency remains.
 
 ### Added
 
